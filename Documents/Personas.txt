@@ -1,0 +1,26 @@
+
+UNIVERSITY CLASSROOM LOCATOR
+USER ROLES AND RESPONSIBILITIES
+
+1. ADMIN
+    - Manage classroom records
+    - Add and update building information
+    - Add and update classroom information
+    - Add and update classroom schedules
+    - Manage room availability information
+
+
+2. FACULTY / TEACHER
+    - View classroom schedules
+    - Check classroom availability
+    - Locate classrooms within the campus
+    - View building and floor information
+    - Check assigned classroom information
+
+
+3. STUDENT
+    - Search for classrooms
+    - Locate classrooms within the campus
+    - Check classroom availability
+    - View classroom schedules
+    - View building and floor information
