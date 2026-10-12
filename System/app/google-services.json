@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "839626378465",
+    "project_id": "university-classroom-locator",
+    "storage_bucket": "university-classroom-locator.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:839626378465:android:86d9ebffedf63e1ab6bba0",
+        "android_client_info": {
+          "package_name": "com.example.oopproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC52IcosMRMb-88ya6j19s8I8QvgDn_3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
