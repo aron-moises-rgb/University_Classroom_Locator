@@ -3,4 +3,12 @@
     <string name="login">Login</string>
     <string name="welcome">Welcome!</string>
     <string name="sign_out">Sign out</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_classrooms">Classrooms</string>
+    <string name="nav_profile">Profile</string>
+    <string name="full_name">Full Name</string>
+    <string name="email">Email</string>
+    <string name="profile">Profile</string>
+    <string name="profile_icon">Profile icon</string>
+    <string name="account_type">Account Type</string>
 </resources>

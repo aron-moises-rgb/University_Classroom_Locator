@@ -50,7 +50,7 @@
                 android:textColor="@color/black"
                 android:textColorHint="#9CA3AF"
                 android:textSize="16sp"
-                app:simpleItems="@array/accountType" />
+                app:simpleItems="@array/accountType"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Full Name Input -->
@@ -77,7 +77,7 @@
                 android:inputType="textPersonName"
                 android:textColor="#1F2937"
                 android:textColorHint="#9CA3AF"
-                android:textSize="14sp" />
+                android:textSize="14sp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Email Input -->
@@ -104,7 +104,7 @@
                 android:inputType="textEmailAddress"
                 android:textColor="#1F2937"
                 android:textColorHint="#9CA3AF"
-                android:textSize="14sp" />
+                android:textSize="14sp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password Input -->
@@ -132,7 +132,7 @@
                 android:inputType="textPassword"
                 android:textColor="#1F2937"
                 android:textColorHint="#9CA3AF"
-                android:textSize="14sp" />
+                android:textSize="14sp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Confirm Password Input -->
@@ -171,7 +171,7 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="24dp"
             android:indeterminateTint="@color/dark_purple"
-            android:visibility="gone" />
+            android:visibility="gone"/>
 
         <!-- Sign Up Button -->
         <com.google.android.material.button.MaterialButton
@@ -185,7 +185,7 @@
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="8dp"/>
 
         <!-- Bottom Text (Already have an account? Login) -->
         <LinearLayout
@@ -202,7 +202,7 @@
                 android:text="Already have an account? "
                 android:textColor="#1F2937"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <TextView
                 android:id="@+id/tvLogin"
@@ -211,7 +211,7 @@
                 android:text="Login"
                 android:textColor="@color/dark_purple"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
         </LinearLayout>
 
     </LinearLayout>

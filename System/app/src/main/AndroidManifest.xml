@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OOPProject" >
         <activity
-            android:name=".sign_in_page"
+            android:name=".frontEnd.SignInPage"
             android:exported="true"
             android:windowSoftInputMode="adjustResize" >
             <intent-filter>
@@ -24,11 +24,14 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".sign_up_page"
+            android:name=".frontEnd.SignUpPage"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".HomePage"
+            android:name=".frontEnd.HomePage"
+            android:exported="false" />
+        <activity
+            android:name=".frontEnd.ProfilePage"
             android:exported="false" />
     </application>
 

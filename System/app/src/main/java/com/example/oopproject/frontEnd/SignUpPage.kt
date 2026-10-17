@@ -1,86 +1,51 @@
-package com.example.oopproject
+package com.example.oopproject.frontEnd
 
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ProgressBar
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.MaterialAutoCompleteTextView
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import com.example.oopproject.databinding.ActivitySignUpPageBinding
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-class sign_up_page : AppCompatActivity() {
+class SignUpPage : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
+    private lateinit var binding: ActivitySignUpPageBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_sign_up_page)
+        binding = ActivitySignUpPageBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Initialize Firebase
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
 
-        // Views
-        val root = findViewById<ScrollView>(R.id.main)
-        val statusInput = findViewById<MaterialAutoCompleteTextView>(R.id.statusInput)
-        val etFullName = findViewById<TextInputEditText>(R.id.etFullName)
-        val etEmail = findViewById<TextInputEditText>(R.id.etEmail)
-        val etPassword = findViewById<TextInputEditText>(R.id.etPassword)
-        val etConfirmPassword = findViewById<TextInputEditText>(R.id.etConfirmPassword)
-        val btnSignUp = findViewById<MaterialButton>(R.id.btnSignUp)
-        val tvLogin = findViewById<TextView>(R.id.tvLogin)
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
-
-        val tilFullName = findViewById<TextInputLayout>(R.id.tilFullName)
-        val tilEmail = findViewById<TextInputLayout>(R.id.tilEmail)
-        val tilPassword = findViewById<TextInputLayout>(R.id.tilPassword)
-        val tilConfirmPassword = findViewById<TextInputLayout>(R.id.tilConfirmPassword)
-
-        // Edge-to-edge insets
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
-
-            if (insets.isVisible(WindowInsetsCompat.Type.ime())) {
-                (v as ScrollView).post {
-                    v.smoothScrollTo(0, v.getChildAt(0).bottom)
-                }
-            }
-            insets
-        }
-
         // Navigate to Sign In
-        tvLogin.setOnClickListener {
-            startActivity(Intent(this, sign_in_page::class.java))
+        binding.tvLogin.setOnClickListener {
+            startActivity(Intent(this, SignInPage::class.java))
             finish()
         }
 
         // Sign Up button click
-        btnSignUp.setOnClickListener {
-            val accountType = statusInput.text.toString().trim()
-            val fullName = etFullName.text.toString().trim()
-            val email = etEmail.text.toString().trim()
-            val password = etPassword.text.toString().trim()
-            val confirmPassword = etConfirmPassword.text.toString().trim()
+        binding.btnSignUp.setOnClickListener {
+            val accountType = binding.statusInput.text.toString().trim()
+            val fullName = binding.etFullName.text.toString().trim()
+            val email = binding.etEmail.text.toString().trim()
+            val password = binding.etPassword.text.toString().trim()
+            val confirmPassword = binding.etConfirmPassword.text.toString().trim()
 
             // Clear previous errors
-            tilFullName.error = null
-            tilEmail.error = null
-            tilPassword.error = null
-            tilConfirmPassword.error = null
+            binding.tilFullName.error = null
+            binding.tilEmail.error = null
+            binding.tilPassword.error = null
+            binding.tilConfirmPassword.error = null
 
             // Validate inputs
             if (accountType.isEmpty()) {
@@ -88,34 +53,34 @@ class sign_up_page : AppCompatActivity() {
                 return@setOnClickListener
             }
             if (fullName.isEmpty()) {
-                tilFullName.error = "Full name is required"
+                binding.tilFullName.error = "Full name is required"
                 return@setOnClickListener
             }
             if (email.isEmpty()) {
-                tilEmail.error = "Email is required"
+                binding.tilEmail.error = "Email is required"
                 return@setOnClickListener
             }
             if (password.isEmpty()) {
-                tilPassword.error = "Password is required"
+                binding.tilPassword.error = "Password is required"
                 return@setOnClickListener
             }
             if (password.length < 6) {
-                tilPassword.error = "Password must be at least 6 characters"
+                binding.tilPassword.error = "Password must be at least 6 characters"
                 return@setOnClickListener
             }
             if (confirmPassword.isEmpty()) {
-                tilConfirmPassword.error = "Please confirm your password"
+                binding.tilConfirmPassword.error = "Please confirm your password"
                 return@setOnClickListener
             }
             if (password != confirmPassword) {
-                tilConfirmPassword.error = "Passwords do not match"
+                binding.tilConfirmPassword.error = "Passwords do not match"
                 return@setOnClickListener
             }
 
             // Show loading and disable navigation
-            progressBar.visibility = ProgressBar.VISIBLE
-            btnSignUp.isEnabled = false
-            tvLogin.isClickable = false
+            binding.progressBar.visibility = ProgressBar.VISIBLE
+            binding.btnSignUp.isEnabled = false
+            binding.tvLogin.isClickable = false
 
             // Create user with Firebase Auth
             auth.createUserWithEmailAndPassword(email, password)
@@ -127,9 +92,9 @@ class sign_up_page : AppCompatActivity() {
                         val userId = auth.currentUser?.uid
 
                         if (userId == null) {
-                            progressBar.visibility = ProgressBar.GONE
-                            btnSignUp.isEnabled = true
-                            tvLogin.isClickable = true
+                            binding.progressBar.visibility = ProgressBar.GONE
+                            binding.btnSignUp.isEnabled = true
+                            binding.tvLogin.isClickable = true
 
                             Toast.makeText(
                                 this,
@@ -156,9 +121,9 @@ class sign_up_page : AppCompatActivity() {
                             .addOnSuccessListener {
 
                                 // Firestore save successful
-                                progressBar.visibility = ProgressBar.GONE
-                                btnSignUp.isEnabled = true
-                                tvLogin.isClickable = true
+                                binding.progressBar.visibility = ProgressBar.GONE
+                                binding.btnSignUp.isEnabled = true
+                                binding.tvLogin.isClickable = true
 
                                 // Sign out AFTER Firestore successfully saves the data
                                 auth.signOut()
@@ -171,7 +136,7 @@ class sign_up_page : AppCompatActivity() {
 
                                 // Go to Sign In page
                                 startActivity(
-                                    Intent(this, sign_in_page::class.java)
+                                    Intent(this, SignInPage::class.java)
                                 )
 
                                 finish()
@@ -179,9 +144,9 @@ class sign_up_page : AppCompatActivity() {
                             .addOnFailureListener { e ->
 
                                 // Firestore failed
-                                progressBar.visibility = ProgressBar.GONE
-                                btnSignUp.isEnabled = true
-                                tvLogin.isClickable = true
+                                binding.progressBar.visibility = ProgressBar.GONE
+                                binding.btnSignUp.isEnabled = true
+                                binding.tvLogin.isClickable = true
 
                                 // Remove the authentication session because
                                 // the registration process was not completed
@@ -197,9 +162,9 @@ class sign_up_page : AppCompatActivity() {
                     } else {
 
                         // Firebase Authentication failed
-                        progressBar.visibility = ProgressBar.GONE
-                        btnSignUp.isEnabled = true
-                        tvLogin.isClickable = true
+                        binding.progressBar.visibility = ProgressBar.GONE
+                        binding.btnSignUp.isEnabled = true
+                        binding.tvLogin.isClickable = true
 
                         Toast.makeText(
                             this,
