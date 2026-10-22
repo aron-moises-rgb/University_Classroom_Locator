@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
-    android:fillViewport="true"
-    android:id="@+id/main">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="28dp">
+
+        <!-- Header App Logo -->
+        <ImageView
+            android:id="@+id/ivAppLogo"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="32dp"
+            android:contentDescription="App Logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/app_logo" />
 
         <!-- Screen Title -->
         <TextView
@@ -19,11 +30,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="70dp"
-            android:text="Sign in"
+            android:layout_marginTop="16dp"
+            android:text="Welcome Back"
             android:textColor="@color/dark_purple"
-            android:textSize="28sp"
-            android:textStyle="bold"/>
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="6dp"
+            android:text="Sign in to continue to your account"
+            android:textColor="#6B7280"
+            android:textSize="14sp" />
 
         <!-- Email Input -->
         <com.google.android.material.textfield.TextInputLayout
@@ -31,25 +52,27 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
-            app:boxBackgroundColor="#F3F4F6"
+            android:layout_marginTop="32dp"
+            app:boxBackgroundColor="#F9FAFB"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusTopStart="12dp"
             app:boxStrokeColor="@color/dark_purple"
             app:boxStrokeWidth="2dp"
-            app:boxCornerRadiusTopStart="8dp"
-            app:boxCornerRadiusTopEnd="8dp"
-            app:boxCornerRadiusBottomStart="8dp"
-            app:boxCornerRadiusBottomEnd="8dp"
-            app:hintEnabled="false">
+            app:hintEnabled="false"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="@color/dark_purple">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Email"
+                android:hint="Email Address"
                 android:inputType="textEmailAddress"
                 android:textColor="#1F2937"
                 android:textColorHint="#9CA3AF"
-                android:textSize="14sp"/>
+                android:textSize="15sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password Input -->
@@ -59,14 +82,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            app:boxBackgroundColor="#F3F4F6"
+            app:boxBackgroundColor="#F9FAFB"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusTopStart="12dp"
             app:boxStrokeColor="@color/dark_purple"
             app:boxStrokeWidth="2dp"
-            app:boxCornerRadiusTopStart="8dp"
-            app:boxCornerRadiusTopEnd="8dp"
-            app:boxCornerRadiusBottomStart="8dp"
-            app:boxCornerRadiusBottomEnd="8dp"
-            app:hintEnabled="false">
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/dark_purple"
+            app:hintEnabled="false"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/dark_purple">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPassword"
@@ -76,10 +103,10 @@
                 android:inputType="textPassword"
                 android:textColor="#1F2937"
                 android:textColorHint="#9CA3AF"
-                android:textSize="14sp"/>
+                android:textSize="15sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Sign In Button -->
+        <!-- Forgot Password Link -->
         <TextView
             android:id="@+id/tvForgotPassword"
             android:layout_width="wrap_content"
@@ -89,7 +116,7 @@
             android:text="Forgot password?"
             android:textColor="@color/dark_purple"
             android:textSize="14sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
         <!-- Loading Indicator -->
         <ProgressBar
@@ -97,39 +124,39 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="20dp"
             android:indeterminateTint="@color/dark_purple"
-            android:visibility="gone"/>
+            android:visibility="gone" />
 
+        <!-- Sign In Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSignIn"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="20dp"
             android:backgroundTint="@color/dark_purple"
-            android:text="Sign in"
+            android:text="Sign In"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:cornerRadius="12dp"/>
+            app:cornerRadius="12dp" />
 
-        <!-- Bottom Text (Don't have an account? Sign up) -->
+        <!-- Bottom Sign Up Prompt -->
         <LinearLayout
             android:id="@+id/layoutSignUpPrompt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="32dp"
             android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Don't have an account? "
-                android:textColor="#1F2937"
-                android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textColor="#6B7280"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvSignUp"
@@ -138,7 +165,7 @@
                 android:text="Sign up"
                 android:textColor="@color/dark_purple"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
         </LinearLayout>
 
     </LinearLayout>

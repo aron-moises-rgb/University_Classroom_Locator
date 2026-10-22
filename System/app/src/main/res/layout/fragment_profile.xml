@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F3FA"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context=".frontEnd.ProfileFragment">
 
     <!-- Main content area -->
     <ScrollView
@@ -56,7 +58,7 @@
                         app:tint="@color/dark_purple" />
                 </FrameLayout>
 
-                <!-- Name under avatar (set this in your Activity too) -->
+                <!-- Name under avatar -->
                 <TextView
                     android:id="@+id/tvProfileHeaderName"
                     android:layout_width="wrap_content"
