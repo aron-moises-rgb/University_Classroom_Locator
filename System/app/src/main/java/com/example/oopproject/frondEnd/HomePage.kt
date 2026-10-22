@@ -45,7 +45,7 @@ class HomePage : AppCompatActivity() {
                     true
                 }
                 R.id.nav_profile -> {
-                    startActivity(Intent(this, ProfilePage::class.java))
+                    startActivity(Intent(this, ProfileFragment::class.java))
                     finish()
                     true
                 }
