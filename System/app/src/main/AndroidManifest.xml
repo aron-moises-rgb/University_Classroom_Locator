@@ -30,9 +30,6 @@
         <activity
             android:name=".frontEnd.HomePage"
             android:exported="false" />
-        <activity
-            android:name=".frontEnd.ProfileFragment"
-            android:exported="false" />
     </application>
 
 </manifest>

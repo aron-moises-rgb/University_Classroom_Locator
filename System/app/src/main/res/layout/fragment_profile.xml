@@ -9,11 +9,10 @@
     android:orientation="vertical"
     tools:context=".frontEnd.ProfileFragment">
 
-    <!-- Main content area -->
+    <!-- Scrollable Profile Content -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
@@ -155,7 +154,7 @@
                 android:layout_marginStart="20dp"
                 android:layout_marginTop="28dp"
                 android:layout_marginEnd="20dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="32dp"
                 android:backgroundTint="@color/dark_purple"
                 android:text="@string/sign_out"
                 android:textAllCaps="false"
@@ -166,16 +165,5 @@
 
         </LinearLayout>
     </ScrollView>
-
-    <!-- Bottom Navigation -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        android:elevation="8dp"
-        app:itemIconTint="@color/bottom_nav_color"
-        app:itemTextColor="@color/bottom_nav_color"
-        app:menu="@menu/bottom_nav_menu" />
 
 </LinearLayout>
