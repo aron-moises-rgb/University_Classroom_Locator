@@ -1,7 +1,6 @@
 package com.example.oopproject.frontEnd
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -32,7 +31,7 @@ class HomePage : AppCompatActivity() {
                     true
                 }
                 R.id.nav_classrooms -> {
-                    Toast.makeText(this, "Classrooms coming soon", Toast.LENGTH_SHORT).show()
+                    replaceFragment(ClassroomsFragment())
                     true
                 }
                 R.id.nav_profile -> {
