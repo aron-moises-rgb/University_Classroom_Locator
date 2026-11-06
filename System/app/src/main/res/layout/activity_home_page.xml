@@ -23,6 +23,7 @@
         android:elevation="8dp"
         app:itemIconTint="@color/bottom_nav_color"
         app:itemTextColor="@color/bottom_nav_color"
+        app:labelVisibilityMode="selected"
         app:menu="@menu/bottom_nav_menu" />
 
 </LinearLayout>

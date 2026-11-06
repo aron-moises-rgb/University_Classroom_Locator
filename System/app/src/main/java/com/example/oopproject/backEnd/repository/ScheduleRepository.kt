@@ -1,7 +1,9 @@
 package com.example.oopproject.backEnd.repository
+
 import com.example.oopproject.backEnd.data.Schedule
 import com.example.oopproject.backEnd.data.enums.DayOfWeek
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 class ScheduleRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -17,6 +19,23 @@ class ScheduleRepository {
                 onSuccess(result.toObjects(Schedule::class.java))
             }
             .addOnFailureListener { onError(it) }
+    }
+
+    fun listenToSchedulesByClassroom(
+        classroomId: String,
+        onUpdate: (List<Schedule>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return schedules.whereEqualTo("classroomId", classroomId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    onUpdate(snapshot.toObjects(Schedule::class.java))
+                }
+            }
     }
 
     fun getSchedulesByDay(

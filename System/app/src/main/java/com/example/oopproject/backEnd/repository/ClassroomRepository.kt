@@ -1,6 +1,8 @@
 package com.example.oopproject.backEnd.repository
+
 import com.example.oopproject.backEnd.data.Classroom
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 class ClassroomRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -15,6 +17,21 @@ class ClassroomRepository {
                 onSuccess(result.toObjects(Classroom::class.java))
             }
             .addOnFailureListener { onError(it) }
+    }
+
+    fun listenToClassrooms(
+        onUpdate: (List<Classroom>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return classrooms.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                onError(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                onUpdate(snapshot.toObjects(Classroom::class.java))
+            }
+        }
     }
 
     fun getClassroomsByBuilding(

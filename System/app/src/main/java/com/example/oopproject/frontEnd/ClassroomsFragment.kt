@@ -10,11 +10,13 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.repository.ClassroomRepository
 import com.example.oopproject.frontEnd.adapters.ClassroomAdapter
 import com.example.oopproject.frontEnd.models.ClassroomUiModel
 import com.example.oopproject.frontEnd.models.RoomStatusType
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.firebase.firestore.ListenerRegistration
 
 class ClassroomsFragment : Fragment() {
 
@@ -27,11 +29,14 @@ class ClassroomsFragment : Fragment() {
     private lateinit var tvSelectedLevelHeader: TextView
     private lateinit var tvFacilitiesCount: TextView
 
+    private val classroomRepo = ClassroomRepository()
+    private var classroomsListener: ListenerRegistration? = null
+
     private var selectedBuilding: String = "Building B"
     private var selectedFloor: Int? = 2
 
-    // Master dataset of classrooms
-    private val allClassesList = listOf(
+    // Dynamic list populated from Firestore Realtime Listener
+    private var allClassesList = listOf(
         ClassroomUiModel(
             roomId = "101",
             roomName = "Room 101",
@@ -155,10 +160,37 @@ class ClassroomsFragment : Fragment() {
 
         setupFilterListeners()
         filterClassrooms()
+
+        // Realtime Listener: Listen to Firestore Classroom changes live
+        classroomsListener = classroomRepo.listenToClassrooms(
+            onUpdate = { classroomsFromDb ->
+                if (classroomsFromDb.isNotEmpty()) {
+                    val firestoreModels = classroomsFromDb.map { room ->
+                        ClassroomUiModel(
+                            roomId = room.classroomId,
+                            roomName = room.roomNumber,
+                            buildingName = room.buildingId.ifEmpty { "Building B" },
+                            floorNumber = 2,
+                            roomSubtitle = "Capacity: ${room.capacity} • ${room.buildingId}",
+                            statusType = RoomStatusType.AVAILABLE,
+                            statusText = "• AVAILABLE",
+                            bannerTitle = "Free Until Next Class",
+                            bannerSubtitle = "Live Sync from Firestore"
+                        )
+                    }
+                    allClassesList = firestoreModels + allClassesList.filter { fallback ->
+                        firestoreModels.none { fs -> fs.roomName == fallback.roomName }
+                    }
+                    filterClassrooms()
+                }
+            },
+            onError = {
+                // Keep displaying list on connection error
+            }
+        )
     }
 
     private fun setupFilterListeners() {
-        // Building Chip Listener
         chipGroupBuildings.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val checkedChip = group.findViewById<Chip>(checkedIds[0])
@@ -169,7 +201,6 @@ class ClassroomsFragment : Fragment() {
             filterClassrooms()
         }
 
-        // Floor Chip Listener
         chipGroupFloors.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val checkedChip = group.findViewById<Chip>(checkedIds[0])
@@ -202,11 +233,15 @@ class ClassroomsFragment : Fragment() {
             matchesBuilding && matchesFloor
         }
 
-        // Update Headers
         tvSelectedBuildingHeader.text = selectedBuilding
         tvSelectedLevelHeader.text = if (selectedFloor != null) "Level $selectedFloor" else "All Levels"
         tvFacilitiesCount.text = "${filteredList.size} Facilities"
 
         adapter.updateClassrooms(filteredList)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        classroomsListener?.remove()
     }
 }
