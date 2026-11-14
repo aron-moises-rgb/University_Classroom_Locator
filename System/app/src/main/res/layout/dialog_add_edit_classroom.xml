@@ -64,9 +64,35 @@
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Building ID / Name -->
+            <!-- Building Dropdown Selection -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilBuildingId"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:boxBackgroundColor="#F9FAFB"
+                app:boxCornerRadiusBottomEnd="10dp"
+                app:boxCornerRadiusBottomStart="10dp"
+                app:boxCornerRadiusTopEnd="10dp"
+                app:boxCornerRadiusTopStart="10dp"
+                app:boxStrokeColor="@color/dark_purple"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/etBuildingId"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Select Building"
+                    android:inputType="none"
+                    android:textColor="#1F2937"
+                    android:textColorHint="#9CA3AF"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Floor / Level -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilFloorId"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -80,11 +106,11 @@
                 app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etBuildingId"
+                    android:id="@+id/etFloorId"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Building (e.g. Building B)"
-                    android:inputType="text"
+                    android:hint="Floor Level (e.g. 1, 2, 3)"
+                    android:inputType="number"
                     android:textColor="#1F2937"
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>

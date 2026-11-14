@@ -27,11 +27,13 @@ class AdminDashboardFragment : Fragment() {
         val btnGoSchedules: MaterialButton = view.findViewById(R.id.btnGoSchedules)
 
         btnGoBuildings.setOnClickListener {
-            Toast.makeText(requireContext(), "Opening Buildings Manager", Toast.LENGTH_SHORT).show()
+            val homeActivity = activity as? HomePage
+            homeActivity?.replaceFragment(ManageBuildingsFragment())
         }
 
         btnGoClassrooms.setOnClickListener {
-            Toast.makeText(requireContext(), "Opening Classrooms Manager", Toast.LENGTH_SHORT).show()
+            val homeActivity = activity as? HomePage
+            homeActivity?.replaceFragment(ManageClassroomsFragment())
         }
 
         btnGoSchedules.setOnClickListener {

@@ -6,10 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.repository.BuildingRepository
 import com.example.oopproject.backEnd.repository.ClassroomRepository
 import com.example.oopproject.frontEnd.adapters.ClassroomAdapter
 import com.example.oopproject.frontEnd.models.ClassroomUiModel
@@ -30,102 +32,16 @@ class ClassroomsFragment : Fragment() {
     private lateinit var tvFacilitiesCount: TextView
 
     private val classroomRepo = ClassroomRepository()
+    private val buildingRepo = BuildingRepository()
+
     private var classroomsListener: ListenerRegistration? = null
+    private var buildingsListener: ListenerRegistration? = null
 
-    private var selectedBuilding: String = "Building B"
-    private var selectedFloor: Int? = 2
+    // Default filter to "All Buildings" and "All Floors" so all rooms are visible
+    private var selectedBuilding: String = "All Buildings"
+    private var selectedFloor: Int? = 1
 
-    // Dynamic list populated from Firestore Realtime Listener
-    private var allClassesList = listOf(
-        ClassroomUiModel(
-            roomId = "101",
-            roomName = "Room 101",
-            buildingName = "Building A",
-            floorNumber = 1,
-            roomSubtitle = "Lecture Room • Building A • 1st Floor • West Wing",
-            statusType = RoomStatusType.AVAILABLE,
-            statusText = "• AVAILABLE",
-            bannerTitle = "Free until 11:00 AM",
-            bannerSubtitle = "Next: MATH 101 (11:00 - 12:30 PM)"
-        ),
-        ClassroomUiModel(
-            roomId = "102",
-            roomName = "Room 102",
-            buildingName = "Building A",
-            floorNumber = 1,
-            roomSubtitle = "Science Lab A • Building A • 1st Floor • East Wing",
-            statusType = RoomStatusType.OCCUPIED,
-            statusText = "• OCCUPIED",
-            bannerTitle = "PHYS 102 - Physics Lab",
-            bannerSubtitle = "08:00 - 10:00 AM • Prof. Cruz"
-        ),
-        ClassroomUiModel(
-            roomId = "201",
-            roomName = "Room 201",
-            buildingName = "Building A",
-            floorNumber = 2,
-            roomSubtitle = "Auditorium • Building A • 2nd Floor • Main Wing",
-            statusType = RoomStatusType.AVAILABLE,
-            statusText = "• AVAILABLE",
-            bannerTitle = "Free All Day",
-            bannerSubtitle = "No upcoming classes scheduled"
-        ),
-        ClassroomUiModel(
-            roomId = "104",
-            roomName = "Room 104",
-            buildingName = "Building B",
-            floorNumber = 1,
-            roomSubtitle = "Computer Lab A • Building B • 1st Floor • South Wing",
-            statusType = RoomStatusType.AVAILABLE,
-            statusText = "• AVAILABLE",
-            bannerTitle = "Free until 01:00 PM",
-            bannerSubtitle = "Next: IT 201 (01:00 - 03:00 PM)"
-        ),
-        ClassroomUiModel(
-            roomId = "204",
-            roomName = "Room 204",
-            buildingName = "Building B",
-            floorNumber = 2,
-            roomSubtitle = "Lecture Hall • Building B • 2nd Floor • North Wing",
-            statusType = RoomStatusType.AVAILABLE,
-            statusText = "• AVAILABLE",
-            bannerTitle = "Free until 10:00 AM",
-            bannerSubtitle = "Next: BSIT 1207 (10:00 - 11:30 AM)"
-        ),
-        ClassroomUiModel(
-            roomId = "205",
-            roomName = "Room 205",
-            buildingName = "Building B",
-            floorNumber = 2,
-            roomSubtitle = "Computer Lab B • Building B • 2nd Floor • East Wing",
-            statusType = RoomStatusType.OCCUPIED,
-            statusText = "• OCCUPIED",
-            bannerTitle = "CS 101 - Intro to Computing",
-            bannerSubtitle = "09:00 - 11:00 AM • Prof. Santos"
-        ),
-        ClassroomUiModel(
-            roomId = "206",
-            roomName = "Room 206",
-            buildingName = "Building B",
-            floorNumber = 2,
-            roomSubtitle = "Seminar Room • Building B • 2nd Floor • West Wing",
-            statusType = RoomStatusType.UPCOMING,
-            statusText = "• UPCOMING (In 15m)",
-            bannerTitle = "BSIT 1208 - Discrete Math",
-            bannerSubtitle = "Starts promptly at 10:30 AM"
-        ),
-        ClassroomUiModel(
-            roomId = "301",
-            roomName = "Room 301",
-            buildingName = "Building B",
-            floorNumber = 3,
-            roomSubtitle = "Multipurpose Hall • Building B • 3rd Floor • Top Wing",
-            statusType = RoomStatusType.AVAILABLE,
-            statusText = "• AVAILABLE",
-            bannerTitle = "Free until 02:00 PM",
-            bannerSubtitle = "Next: ENG 101 (02:00 - 04:00 PM)"
-        )
-    )
+    private var allClassesList = listOf<ClassroomUiModel>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -159,35 +75,97 @@ class ClassroomsFragment : Fragment() {
         rvClassrooms.adapter = adapter
 
         setupFilterListeners()
-        filterClassrooms()
+        loadRealtimeBuildings()
+        loadRealtimeClassrooms()
+    }
 
-        // Realtime Listener: Listen to Firestore Classroom changes live
-        classroomsListener = classroomRepo.listenToClassrooms(
-            onUpdate = { classroomsFromDb ->
-                if (classroomsFromDb.isNotEmpty()) {
-                    val firestoreModels = classroomsFromDb.map { room ->
-                        ClassroomUiModel(
-                            roomId = room.classroomId,
-                            roomName = room.roomNumber,
-                            buildingName = room.buildingId.ifEmpty { "Building B" },
-                            floorNumber = 2,
-                            roomSubtitle = "Capacity: ${room.capacity} • ${room.buildingId}",
-                            statusType = RoomStatusType.AVAILABLE,
-                            statusText = "• AVAILABLE",
-                            bannerTitle = "Free Until Next Class",
-                            bannerSubtitle = "Live Sync from Firestore"
-                        )
+    private fun loadRealtimeBuildings() {
+        buildingsListener = buildingRepo.listenToBuildings(
+            onUpdate = { buildingsFromDb ->
+                if (isAdded) {
+                    chipGroupBuildings.removeAllViews()
+
+                    // Always add "All Buildings" chip first
+                    val allChip = createChip("All Buildings", selectedBuilding == "All Buildings")
+                    chipGroupBuildings.addView(allChip)
+
+                    // Dynamically add chips for every building in Firestore
+                    buildingsFromDb.forEach { bldg ->
+                        val bName = bldg.name.ifEmpty { "Building" }
+                        val bChip = createChip(bName, selectedBuilding.equals(bName, ignoreCase = true))
+                        chipGroupBuildings.addView(bChip)
                     }
-                    allClassesList = firestoreModels + allClassesList.filter { fallback ->
-                        firestoreModels.none { fs -> fs.roomName == fallback.roomName }
-                    }
-                    filterClassrooms()
                 }
             },
-            onError = {
-                // Keep displaying list on connection error
-            }
+            onError = {}
         )
+    }
+
+    private fun createChip(label: String, isChecked: Boolean): Chip {
+        return Chip(requireContext()).apply {
+            id = View.generateViewId()
+            text = label
+            isCheckable = true
+            this.isChecked = isChecked
+            setChipBackgroundColorResource(R.color.chip_background_selector)
+            setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector))
+        }
+    }
+
+    private fun loadRealtimeClassrooms() {
+        classroomsListener = classroomRepo.listenToClassrooms(
+            onUpdate = { classroomsFromDb ->
+                val firestoreModels = classroomsFromDb.map { room ->
+                    // 1. Try parsing floorId string
+                    var fNum = room.floorId.replace(Regex("[^0-9]"), "").toIntOrNull()
+
+                    // 2. If floorId is empty/invalid, infer floor from room number first digit (e.g. "HEB 201" -> "201" -> Floor 2)
+                    if (fNum == null || fNum == 0) {
+                        val digits = room.roomNumber.replace(Regex("[^0-9]"), "")
+                        if (digits.length >= 3) {
+                            fNum = digits.substring(0, 1).toIntOrNull() ?: 1
+                        } else {
+                            fNum = 1
+                        }
+                    }
+
+                    val bName = room.buildingId.ifEmpty { "Main Building" }
+
+                    ClassroomUiModel(
+                        roomId = room.classroomId,
+                        roomName = room.roomNumber.ifEmpty { "Classroom" },
+                        buildingName = bName,
+                        floorNumber = fNum,
+                        roomSubtitle = "Floor $fNum • Capacity: ${room.capacity} seats • $bName",
+                        statusType = RoomStatusType.AVAILABLE,
+                        statusText = "• AVAILABLE",
+                        bannerTitle = "Capacity: ${room.capacity} Students",
+                        bannerSubtitle = "Live Sync from Firestore"
+                    )
+                }
+                allClassesList = firestoreModels
+                updateDynamicFloorChips()
+                filterClassrooms()
+            },
+            onError = {}
+        )
+    }
+
+    private fun updateDynamicFloorChips() {
+        if (!isAdded) return
+        chipGroupFloors.removeAllViews()
+
+        // Discover all unique floor numbers present in Firestore classrooms
+        val availableFloors = allClassesList.map { it.floorNumber }.distinct().sorted()
+
+        val activeFloor = if (selectedFloor in availableFloors) selectedFloor else (availableFloors.firstOrNull() ?: 1)
+        selectedFloor = activeFloor
+
+        availableFloors.forEach { fNum ->
+            val fLabel = "Floor $fNum"
+            val fChip = createChip(fLabel, selectedFloor == fNum)
+            chipGroupFloors.addView(fChip)
+        }
     }
 
     private fun setupFilterListeners() {
@@ -205,14 +183,10 @@ class ClassroomsFragment : Fragment() {
             if (checkedIds.isNotEmpty()) {
                 val checkedChip = group.findViewById<Chip>(checkedIds[0])
                 val text = checkedChip?.text?.toString() ?: ""
-                selectedFloor = when {
-                    text.contains("Floor 1") -> 1
-                    text.contains("Floor 2") -> 2
-                    text.contains("Floor 3") -> 3
-                    else -> null
+                val parsedFloor = text.replace(Regex("[^0-9]"), "").toIntOrNull()
+                if (parsedFloor != null) {
+                    selectedFloor = parsedFloor
                 }
-            } else {
-                selectedFloor = null
             }
             filterClassrooms()
         }
@@ -220,9 +194,9 @@ class ClassroomsFragment : Fragment() {
 
     private fun filterClassrooms() {
         val filteredList = allClassesList.filter { room ->
-            val matchesBuilding = when (selectedBuilding) {
+            val matchesBuilding = when (selectedBuilding.trim()) {
                 "All Buildings" -> true
-                else -> room.buildingName.equals(selectedBuilding, ignoreCase = true)
+                else -> room.buildingName.trim().equals(selectedBuilding.trim(), ignoreCase = true)
             }
 
             val matchesFloor = when (selectedFloor) {
@@ -243,5 +217,6 @@ class ClassroomsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         classroomsListener?.remove()
+        buildingsListener?.remove()
     }
 }

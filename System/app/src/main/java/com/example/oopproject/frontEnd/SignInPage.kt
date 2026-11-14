@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.example.oopproject.databinding.ActivitySignInPageBinding
 import com.example.oopproject.databinding.DialogForgotBinding
 import com.google.firebase.auth.FirebaseAuth
@@ -25,6 +27,12 @@ class SignInPage : AppCompatActivity() {
         binding = ActivitySignInPageBinding.inflate(layoutInflater)
         auth = FirebaseAuth.getInstance()
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         // Navigate to Sign Up
         binding.tvSignUp.setOnClickListener {
