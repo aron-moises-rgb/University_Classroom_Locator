@@ -15,8 +15,10 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.data.Classroom
 import com.example.oopproject.backEnd.data.Schedule
 import com.example.oopproject.backEnd.data.enums.DayOfWeek
+import com.example.oopproject.backEnd.repository.BuildingRepository
 import com.example.oopproject.backEnd.repository.ClassroomRepository
 import com.example.oopproject.backEnd.repository.ScheduleRepository
 import com.example.oopproject.backEnd.util.ScheduleSeeder
@@ -36,6 +38,7 @@ class ManageSchedulesFragment : Fragment() {
     private lateinit var adapter: ScheduleAdapter
     private val scheduleRepo = ScheduleRepository()
     private val classroomRepo = ClassroomRepository()
+    private val buildingRepo = BuildingRepository()
     private val scheduleSeeder = ScheduleSeeder()
     private val db = FirebaseFirestore.getInstance()
 
@@ -108,8 +111,9 @@ class ManageSchedulesFragment : Fragment() {
 
     private fun showAddEditScheduleDialog(existingSchedule: Schedule?) {
         val dialogBinding = DialogAddEditScheduleBinding.inflate(layoutInflater)
+        var allClassroomsList = listOf<Classroom>()
 
-        // 1. Populate Teacher / Instructor Dropdown from Firestore Users where accountType == "Teacher"
+        // 1. Populate Teacher / Instructor Dropdown from Firestore Users
         db.collection("users").get()
             .addOnSuccessListener { result ->
                 val teacherNames = result.documents.mapNotNull { doc ->
@@ -148,30 +152,98 @@ class ManageSchedulesFragment : Fragment() {
                 dialogBinding.etInstructor.setAdapter(fallbackAdapter)
             }
 
-        // 2. Populate Classroom Dropdown from ClassroomRepository
-        classroomRepo.getClassrooms(
-            onSuccess = { classroomsList ->
-                val roomNames = if (classroomsList.isNotEmpty()) {
-                    classroomsList.map { it.roomNumber.ifEmpty { "Room" } }
+        // Helper function to update classroom dropdown based on selected building
+        fun updateClassroomDropdown(selectedBuilding: String) {
+            if (selectedBuilding.isBlank()) {
+                dialogBinding.etClassroomId.setAdapter(null)
+                return
+            }
+
+            val matchingRooms = allClassroomsList.filter { it.buildingId.equals(selectedBuilding, ignoreCase = true) }
+
+            val roomNames = if (matchingRooms.isNotEmpty()) {
+                matchingRooms.map { it.roomNumber.ifEmpty { "Room" } }
+            } else {
+                allClassroomsList.map { it.roomNumber.ifEmpty { "Room" } }
+            }
+
+            val roomAdapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                if (roomNames.isNotEmpty()) roomNames else listOf("Room 204", "Room 205", "Room 206")
+            )
+            dialogBinding.etClassroomId.setAdapter(roomAdapter)
+        }
+
+        // 2. Fetch Buildings and Classrooms for Cascading Dropdowns
+        buildingRepo.getBuildings(
+            onSuccess = { buildingsList ->
+                val buildingNames = if (buildingsList.isNotEmpty()) {
+                    buildingsList.map { it.name.ifEmpty { "Building" } }
                 } else {
-                    listOf("Room 204", "Room 205", "Room 206")
+                    listOf("CAS Building", "Taal Building", "HEB Building")
                 }
-                val roomAdapter = ArrayAdapter(
+                val buildingAdapter = ArrayAdapter(
                     requireContext(),
                     android.R.layout.simple_dropdown_item_1line,
-                    roomNames
+                    buildingNames
                 )
-                dialogBinding.etClassroomId.setAdapter(roomAdapter)
+                dialogBinding.etBuildingId.setAdapter(buildingAdapter)
             },
             onError = {
-                val roomAdapter = ArrayAdapter(
+                val fallbackBuildingAdapter = ArrayAdapter(
                     requireContext(),
                     android.R.layout.simple_dropdown_item_1line,
-                    listOf("Room 204", "Room 205", "Room 206")
+                    listOf("CAS Building", "Taal Building", "HEB Building")
                 )
-                dialogBinding.etClassroomId.setAdapter(roomAdapter)
+                dialogBinding.etBuildingId.setAdapter(fallbackBuildingAdapter)
             }
         )
+
+        classroomRepo.getClassrooms(
+            onSuccess = { classroomsList ->
+                allClassroomsList = classroomsList
+
+                if (existingSchedule != null) {
+                    val matchingRoom = classroomsList.find {
+                        it.roomNumber.equals(existingSchedule.classroomId, ignoreCase = true) ||
+                        it.classroomId.equals(existingSchedule.classroomId, ignoreCase = true)
+                    }
+                    if (matchingRoom != null) {
+                        dialogBinding.etBuildingId.setText(matchingRoom.buildingId, false)
+                        updateClassroomDropdown(matchingRoom.buildingId)
+                    } else {
+                        updateClassroomDropdown("")
+                    }
+                } else {
+                    // When adding a new schedule, clear classroom until building is selected
+                    dialogBinding.etClassroomId.setText("", false)
+                    updateClassroomDropdown("")
+                }
+            },
+            onError = {
+                updateClassroomDropdown("")
+            }
+        )
+
+        // Prompt user with inline red error if classroom dropdown is clicked before choosing a building
+        dialogBinding.etClassroomId.setOnClickListener {
+            val currentBldg = dialogBinding.etBuildingId.text.toString().trim()
+            if (currentBldg.isEmpty()) {
+                dialogBinding.etClassroomId.dismissDropDown()
+                dialogBinding.tilBuildingId.error = "Please select a building first"
+            } else {
+                dialogBinding.tilBuildingId.error = null
+            }
+        }
+
+        // When building selection changes, filter classroom dropdown and clear error
+        dialogBinding.etBuildingId.setOnItemClickListener { _, _, _, _ ->
+            dialogBinding.tilBuildingId.error = null
+            val selectedBldg = dialogBinding.etBuildingId.text.toString().trim()
+            updateClassroomDropdown(selectedBldg)
+            dialogBinding.etClassroomId.setText("", false)
+        }
 
         // 3. Populate Day of Week Dropdown
         val dayOptions = DayOfWeek.values().map { it.name }
@@ -182,19 +254,39 @@ class ManageSchedulesFragment : Fragment() {
         )
         dialogBinding.etDay.setAdapter(dayAdapter)
 
+        // 4. Populate Hour & Minute Dropdowns (Start & End)
+        val hourOptions = (7..20).map { String.format("%02d", it) }
+        val minuteOptions = listOf("00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55")
+
+        val hourAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, hourOptions)
+        val minAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, minuteOptions)
+
+        dialogBinding.etStartHour.setAdapter(hourAdapter)
+        dialogBinding.etStartMin.setAdapter(minAdapter)
+        dialogBinding.etEndHour.setAdapter(hourAdapter)
+        dialogBinding.etEndMin.setAdapter(minAdapter)
+
         if (existingSchedule != null) {
             dialogBinding.tvDialogTitle.text = "Edit Schedule"
             dialogBinding.etSubject.setText(existingSchedule.subject)
             dialogBinding.etInstructor.setText(existingSchedule.instructor, false)
             dialogBinding.etClassroomId.setText(existingSchedule.classroomId, false)
             dialogBinding.etDay.setText(existingSchedule.day.name, false)
-            dialogBinding.etStartTime.setText(existingSchedule.startTime)
-            dialogBinding.etEndTime.setText(existingSchedule.endTime)
+
+            val sParts = existingSchedule.startTime.split(":")
+            val eParts = existingSchedule.endTime.split(":")
+
+            dialogBinding.etStartHour.setText(sParts.getOrNull(0) ?: "09", false)
+            dialogBinding.etStartMin.setText(sParts.getOrNull(1) ?: "00", false)
+            dialogBinding.etEndHour.setText(eParts.getOrNull(0) ?: "11", false)
+            dialogBinding.etEndMin.setText(eParts.getOrNull(1) ?: "00", false)
         } else {
             dialogBinding.tvDialogTitle.text = "Add Schedule"
             dialogBinding.etDay.setText(DayOfWeek.MONDAY.name, false)
-            dialogBinding.etStartTime.setText("09:00")
-            dialogBinding.etEndTime.setText("11:00")
+            dialogBinding.etStartHour.setText("09", false)
+            dialogBinding.etStartMin.setText("00", false)
+            dialogBinding.etEndHour.setText("11", false)
+            dialogBinding.etEndMin.setText("00", false)
         }
 
         val dialog = AlertDialog.Builder(requireContext())
@@ -210,16 +302,35 @@ class ManageSchedulesFragment : Fragment() {
         dialogBinding.btnSave.setOnClickListener {
             val subject = dialogBinding.etSubject.text.toString().trim()
             val instructor = dialogBinding.etInstructor.text.toString().trim()
+            val buildingId = dialogBinding.etBuildingId.text.toString().trim()
             val classroomId = dialogBinding.etClassroomId.text.toString().trim()
             val dayStr = dialogBinding.etDay.text.toString().trim()
-            val startTime = dialogBinding.etStartTime.text.toString().trim().ifEmpty { "09:00" }
-            val endTime = dialogBinding.etEndTime.text.toString().trim().ifEmpty { "11:00" }
+
+            val startHour = dialogBinding.etStartHour.text.toString().trim().ifEmpty { "09" }
+            val startMin = dialogBinding.etStartMin.text.toString().trim().ifEmpty { "00" }
+            val endHour = dialogBinding.etEndHour.text.toString().trim().ifEmpty { "11" }
+            val endMin = dialogBinding.etEndMin.text.toString().trim().ifEmpty { "00" }
+
+            val startTime = "$startHour:$startMin"
+            val endTime = "$endHour:$endMin"
 
             dialogBinding.tilSubject.error = null
-            dialogBinding.tilStartTime.error = null
+            dialogBinding.tilBuildingId.error = null
+            dialogBinding.tilClassroomId.error = null
+            dialogBinding.tilStartHour.error = null
 
             if (subject.isEmpty()) {
                 dialogBinding.tilSubject.error = "Subject code/name is required"
+                return@setOnClickListener
+            }
+
+            if (buildingId.isEmpty()) {
+                dialogBinding.tilBuildingId.error = "Please select a building first"
+                return@setOnClickListener
+            }
+
+            if (classroomId.isEmpty()) {
+                dialogBinding.tilClassroomId.error = "Please select a classroom"
                 return@setOnClickListener
             }
 
@@ -233,7 +344,7 @@ class ManageSchedulesFragment : Fragment() {
             val newEnd = parseTime(endTime)
 
             if (newStart != null && newEnd != null && !newStart.isBefore(newEnd)) {
-                dialogBinding.tilStartTime.error = "Start time must be before end time"
+                dialogBinding.tilStartHour.error = "Start time must be before end time"
                 return@setOnClickListener
             }
 
@@ -260,11 +371,11 @@ class ManageSchedulesFragment : Fragment() {
                 }
 
                 if (conflictingSchedule != null) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Conflict! $classroomId already has ${conflictingSchedule.subject} on $dayEnum (${conflictingSchedule.startTime} - ${conflictingSchedule.endTime})",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Schedule Conflict Detected")
+                        .setMessage("Room $classroomId is already booked for [${conflictingSchedule.subject}] on $dayEnum from ${conflictingSchedule.startTime} to ${conflictingSchedule.endTime}.\n\nPlease choose a different time slot or classroom.")
+                        .setPositiveButton("Got It", null)
+                        .show()
                     return@addOnSuccessListener
                 }
 
