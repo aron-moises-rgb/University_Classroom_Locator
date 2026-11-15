@@ -216,12 +216,13 @@
                     android:layout_weight="1" />
 
                 <TextView
+                    android:id="@+id/tvLiveSyncTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="#E0F2FE"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="5dp"
-                    android:text="Live Sync: 09:42 AM"
+                    android:text="Live Sync: --:-- --"
                     android:textColor="#0369A1"
                     android:textSize="11sp"
                     android:textStyle="bold" />

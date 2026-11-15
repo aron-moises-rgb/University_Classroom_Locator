@@ -1,6 +1,8 @@
 package com.example.oopproject.frontEnd
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -26,6 +28,8 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.firebase.firestore.ListenerRegistration
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class ClassroomsFragment : Fragment() {
 
@@ -37,6 +41,7 @@ class ClassroomsFragment : Fragment() {
     private lateinit var tvSelectedBuildingHeader: TextView
     private lateinit var tvSelectedLevelHeader: TextView
     private lateinit var tvFacilitiesCount: TextView
+    private lateinit var tvLiveSyncTime: TextView
 
     private val classroomRepo = ClassroomRepository()
     private val buildingRepo = BuildingRepository()
@@ -56,6 +61,17 @@ class ClassroomsFragment : Fragment() {
 
     private var allClassesList = listOf<ClassroomUiModel>()
 
+    private val timeUpdateHandler = Handler(Looper.getMainLooper())
+    private val timeUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (isAdded) {
+                recalculateAvailabilityAndRefreshUi()
+                val millisUntilNextMinute = 60000L - (System.currentTimeMillis() % 60000L)
+                timeUpdateHandler.postDelayed(this, millisUntilNextMinute)
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -73,6 +89,7 @@ class ClassroomsFragment : Fragment() {
         tvSelectedBuildingHeader = view.findViewById(R.id.tvSelectedBuildingHeader)
         tvSelectedLevelHeader = view.findViewById(R.id.tvSelectedLevelHeader)
         tvFacilitiesCount = view.findViewById(R.id.tvFacilitiesCount)
+        tvLiveSyncTime = view.findViewById(R.id.tvLiveSyncTime)
 
         rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
 
@@ -90,6 +107,9 @@ class ClassroomsFragment : Fragment() {
         setupFilterListeners()
         loadRealtimeBuildings()
         loadRealtimeClassroomsAndSchedules()
+
+        // Start precision-synchronized system clock timer
+        timeUpdateHandler.post(timeUpdateRunnable)
     }
 
     private fun loadRealtimeBuildings() {
@@ -153,7 +173,12 @@ class ClassroomsFragment : Fragment() {
 
     private fun recalculateAvailabilityAndRefreshUi() {
         val currentDay = availabilityService.getCurrentDayOfWeek()
-        val currentTime = LocalTime.now()
+        val currentTime = LocalTime.now(ZoneId.of("Asia/Manila"))
+
+        if (::tvLiveSyncTime.isInitialized) {
+            val formattedTime = currentTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+            tvLiveSyncTime.text = "Live Sync: $formattedTime"
+        }
 
         val firestoreModels = rawClassroomsFromDb.map { room ->
             // Parse floor number
@@ -279,6 +304,7 @@ class ClassroomsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        timeUpdateHandler.removeCallbacks(timeUpdateRunnable)
         classroomsListener?.remove()
         buildingsListener?.remove()
         schedulesListener?.remove()
