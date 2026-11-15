@@ -14,7 +14,7 @@ import com.google.android.material.button.MaterialButton
 class ClassroomAdapter(
     private var items: List<ClassroomUiModel> = emptyList(),
     private val onDetailsClick: (ClassroomUiModel) -> Unit = {},
-    private val onViewInfoClick: (ClassroomUiModel) -> Unit = {}
+    private val onLocateOnMapClick: (ClassroomUiModel) -> Unit = {}
 ) : RecyclerView.Adapter<ClassroomAdapter.ClassroomViewHolder>() {
 
     class ClassroomViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -24,7 +24,7 @@ class ClassroomAdapter(
         val tvBannerTitle: TextView = itemView.findViewById(R.id.tvBannerTitle)
         val tvBannerSubtitle: TextView = itemView.findViewById(R.id.tvBannerSubtitle)
         val btnDetails: MaterialButton = itemView.findViewById(R.id.btnDetails)
-        val btnViewInfo: MaterialButton = itemView.findViewById(R.id.btnViewInfo)
+        val btnLocateOnMap: MaterialButton = itemView.findViewById(R.id.btnLocateOnMap)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ClassroomViewHolder {
@@ -58,7 +58,7 @@ class ClassroomAdapter(
         }
 
         holder.btnDetails.setOnClickListener { onDetailsClick(item) }
-        holder.btnViewInfo.setOnClickListener { onViewInfoClick(item) }
+        holder.btnLocateOnMap.setOnClickListener { onLocateOnMapClick(item) }
     }
 
     override fun getItemCount(): Int = items.size

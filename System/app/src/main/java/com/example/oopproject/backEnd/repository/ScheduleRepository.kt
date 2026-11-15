@@ -9,6 +9,21 @@ class ScheduleRepository {
     private val db = FirebaseFirestore.getInstance()
     private val schedules = db.collection("schedules")
 
+    fun listenToSchedules(
+        onUpdate: (List<Schedule>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return schedules.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                onError(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                onUpdate(snapshot.toObjects(Schedule::class.java))
+            }
+        }
+    }
+
     fun getSchedulesByClassroom(
         classroomId: String,
         onSuccess: (List<Schedule>) -> Unit,

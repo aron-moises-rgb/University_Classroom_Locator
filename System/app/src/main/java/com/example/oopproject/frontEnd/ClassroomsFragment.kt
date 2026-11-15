@@ -1,6 +1,7 @@
 package com.example.oopproject.frontEnd
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,14 +12,20 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.data.Classroom
+import com.example.oopproject.backEnd.data.Schedule
+import com.example.oopproject.backEnd.data.enums.RoomStatus
 import com.example.oopproject.backEnd.repository.BuildingRepository
 import com.example.oopproject.backEnd.repository.ClassroomRepository
+import com.example.oopproject.backEnd.repository.ScheduleRepository
+import com.example.oopproject.backEnd.service.AvailabilityService
 import com.example.oopproject.frontEnd.adapters.ClassroomAdapter
 import com.example.oopproject.frontEnd.models.ClassroomUiModel
 import com.example.oopproject.frontEnd.models.RoomStatusType
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.firebase.firestore.ListenerRegistration
+import java.time.LocalTime
 
 class ClassroomsFragment : Fragment() {
 
@@ -33,11 +40,17 @@ class ClassroomsFragment : Fragment() {
 
     private val classroomRepo = ClassroomRepository()
     private val buildingRepo = BuildingRepository()
+    private val scheduleRepo = ScheduleRepository()
+    private val availabilityService = AvailabilityService()
 
     private var classroomsListener: ListenerRegistration? = null
     private var buildingsListener: ListenerRegistration? = null
+    private var schedulesListener: ListenerRegistration? = null
 
-    // Default filter to "All Buildings" and "All Floors" so all rooms are visible
+    private var rawClassroomsFromDb = listOf<Classroom>()
+    private var rawSchedulesFromDb = listOf<Schedule>()
+
+    // Default filter to "All Buildings" and "Floor 1"
     private var selectedBuilding: String = "All Buildings"
     private var selectedFloor: Int? = 1
 
@@ -68,15 +81,15 @@ class ClassroomsFragment : Fragment() {
             onDetailsClick = { room ->
                 Toast.makeText(requireContext(), "Details for ${room.roomName}", Toast.LENGTH_SHORT).show()
             },
-            onViewInfoClick = { room ->
-                Toast.makeText(requireContext(), "Viewing info for ${room.roomName}", Toast.LENGTH_SHORT).show()
+            onLocateOnMapClick = { room ->
+                Toast.makeText(requireContext(), "Locating ${room.roomName} on Campus Map...", Toast.LENGTH_SHORT).show()
             }
         )
         rvClassrooms.adapter = adapter
 
         setupFilterListeners()
         loadRealtimeBuildings()
-        loadRealtimeClassrooms()
+        loadRealtimeClassroomsAndSchedules()
     }
 
     private fun loadRealtimeBuildings() {
@@ -97,7 +110,9 @@ class ClassroomsFragment : Fragment() {
                     }
                 }
             },
-            onError = {}
+            onError = { e ->
+                Log.e("ClassroomsFragment", "Building listener error: ${e.message}")
+            }
         )
     }
 
@@ -112,43 +127,89 @@ class ClassroomsFragment : Fragment() {
         }
     }
 
-    private fun loadRealtimeClassrooms() {
+    private fun loadRealtimeClassroomsAndSchedules() {
+        // Listen to Classrooms
         classroomsListener = classroomRepo.listenToClassrooms(
             onUpdate = { classroomsFromDb ->
-                val firestoreModels = classroomsFromDb.map { room ->
-                    // 1. Try parsing floorId string
-                    var fNum = room.floorId.replace(Regex("[^0-9]"), "").toIntOrNull()
-
-                    // 2. If floorId is empty/invalid, infer floor from room number first digit (e.g. "HEB 201" -> "201" -> Floor 2)
-                    if (fNum == null || fNum == 0) {
-                        val digits = room.roomNumber.replace(Regex("[^0-9]"), "")
-                        if (digits.length >= 3) {
-                            fNum = digits.substring(0, 1).toIntOrNull() ?: 1
-                        } else {
-                            fNum = 1
-                        }
-                    }
-
-                    val bName = room.buildingId.ifEmpty { "Main Building" }
-
-                    ClassroomUiModel(
-                        roomId = room.classroomId,
-                        roomName = room.roomNumber.ifEmpty { "Classroom" },
-                        buildingName = bName,
-                        floorNumber = fNum,
-                        roomSubtitle = "Floor $fNum • Capacity: ${room.capacity} seats • $bName",
-                        statusType = RoomStatusType.AVAILABLE,
-                        statusText = "• AVAILABLE",
-                        bannerTitle = "Capacity: ${room.capacity} Students",
-                        bannerSubtitle = "Live Sync from Firestore"
-                    )
-                }
-                allClassesList = firestoreModels
-                updateDynamicFloorChips()
-                filterClassrooms()
+                rawClassroomsFromDb = classroomsFromDb
+                recalculateAvailabilityAndRefreshUi()
             },
-            onError = {}
+            onError = { e ->
+                Log.e("ClassroomsFragment", "Classrooms listener error: ${e.message}")
+            }
         )
+
+        // Listen to Schedules
+        schedulesListener = scheduleRepo.listenToSchedules(
+            onUpdate = { schedulesFromDb ->
+                rawSchedulesFromDb = schedulesFromDb
+                recalculateAvailabilityAndRefreshUi()
+            },
+            onError = { e ->
+                Log.e("ClassroomsFragment", "Schedules listener error: ${e.message}")
+            }
+        )
+    }
+
+    private fun recalculateAvailabilityAndRefreshUi() {
+        val currentDay = availabilityService.getCurrentDayOfWeek()
+        val currentTime = LocalTime.now()
+
+        val firestoreModels = rawClassroomsFromDb.map { room ->
+            // Parse floor number
+            var fNum = room.floorId.replace(Regex("[^0-9]"), "").toIntOrNull()
+            if (fNum == null || fNum == 0) {
+                val digits = room.roomNumber.replace(Regex("[^0-9]"), "")
+                if (digits.length >= 3) {
+                    fNum = digits.substring(0, 1).toIntOrNull() ?: 1
+                } else {
+                    fNum = 1
+                }
+            }
+
+            val bName = room.buildingId.ifEmpty { "Main Building" }
+
+            // Get schedules for this room
+            val roomSchedules = rawSchedulesFromDb.filter { sch ->
+                sch.classroomId.equals(room.classroomId, ignoreCase = true) ||
+                sch.classroomId.equals(room.roomNumber, ignoreCase = true)
+            }
+
+            // Calculate live availability with AvailabilityService
+            val availability = availabilityService.calculateAvailability(
+                schedules = roomSchedules,
+                currentDay = currentDay,
+                currentTime = currentTime
+            )
+
+            val uiStatusType = when (availability.status) {
+                RoomStatus.AVAILABLE -> RoomStatusType.AVAILABLE
+                RoomStatus.OCCUPIED -> RoomStatusType.OCCUPIED
+                RoomStatus.UPCOMING -> RoomStatusType.UPCOMING
+            }
+
+            val uiStatusText = when (availability.status) {
+                RoomStatus.AVAILABLE -> "• AVAILABLE"
+                RoomStatus.OCCUPIED -> "• OCCUPIED"
+                RoomStatus.UPCOMING -> "• UPCOMING"
+            }
+
+            ClassroomUiModel(
+                roomId = room.classroomId,
+                roomName = room.roomNumber.ifEmpty { "Classroom" },
+                buildingName = bName,
+                floorNumber = fNum,
+                roomSubtitle = "Floor $fNum • Capacity: ${room.capacity} seats • $bName",
+                statusType = uiStatusType,
+                statusText = uiStatusText,
+                bannerTitle = availability.bannerTitle,
+                bannerSubtitle = availability.bannerSubtitle
+            )
+        }
+
+        allClassesList = firestoreModels
+        updateDynamicFloorChips()
+        filterClassrooms()
     }
 
     private fun updateDynamicFloorChips() {
@@ -187,6 +248,8 @@ class ClassroomsFragment : Fragment() {
                 if (parsedFloor != null) {
                     selectedFloor = parsedFloor
                 }
+            } else {
+                selectedFloor = null
             }
             filterClassrooms()
         }
@@ -218,5 +281,6 @@ class ClassroomsFragment : Fragment() {
         super.onDestroyView()
         classroomsListener?.remove()
         buildingsListener?.remove()
+        schedulesListener?.remove()
     }
 }

@@ -103,17 +103,20 @@
                 app:strokeColor="#D1D5DB" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnViewInfo"
+                android:id="@+id/btnLocateOnMap"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:backgroundTint="@color/dark_purple"
-                android:text="View Info"
+                android:text="Locate on Map"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
-                app:cornerRadius="10dp" />
+                app:cornerRadius="10dp"
+                app:icon="@drawable/ic_map"
+                app:iconGravity="textStart"
+                app:iconTint="#FFFFFF" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
