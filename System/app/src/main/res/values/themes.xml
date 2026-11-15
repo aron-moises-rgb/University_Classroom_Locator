@@ -10,7 +10,10 @@
         <item name="colorSecondaryVariant">@color/teal_700</item>
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="android:statusBarColor">@color/dark_purple</item>
+        <!-- Splash Screen Window Backgrounds (Fixes Android 12+ White Flash Screen) -->
+        <item name="android:windowBackground">@color/dark_purple</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/dark_purple</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/app_logo</item>
     </style>
 </resources>

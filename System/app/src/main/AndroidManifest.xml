@@ -13,20 +13,27 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OOPProject" >
+
         <activity
-            android:name=".frontEnd.SignInPage"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize" >
+            android:name=".frontEnd.SplashActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".frontEnd.SignInPage"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".frontEnd.SignUpPage"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".frontEnd.HomePage"
             android:exported="false" />
