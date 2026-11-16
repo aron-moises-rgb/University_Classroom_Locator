@@ -43,21 +43,22 @@ class HomePage : AppCompatActivity() {
         // Bottom Navigation setup
         binding.bottomNavigation.selectedItemId = R.id.nav_home
         binding.bottomNavigation.setOnItemSelectedListener { item ->
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
             when (item.itemId) {
                 R.id.nav_home -> {
-                    replaceFragment(HomeFragment())
+                    if (currentFragment !is HomeFragment) replaceFragment(HomeFragment())
                     true
                 }
                 R.id.nav_classrooms -> {
-                    replaceFragment(ClassroomsFragment())
+                    if (currentFragment !is ClassroomsFragment) replaceFragment(ClassroomsFragment())
                     true
                 }
                 R.id.nav_admin -> {
-                    replaceFragment(AdminDashboardFragment())
+                    if (currentFragment !is AdminDashboardFragment) replaceFragment(AdminDashboardFragment())
                     true
                 }
                 R.id.nav_profile -> {
-                    replaceFragment(ProfileFragment())
+                    if (currentFragment !is ProfileFragment) replaceFragment(ProfileFragment())
                     true
                 }
                 else -> false
@@ -76,6 +77,16 @@ class HomePage : AppCompatActivity() {
                 // Show Admin tab if accountType is Admin
                 adminItem?.isVisible = accountType.equals("Admin", ignoreCase = true)
             }
+    }
+
+    fun navigateToClassrooms(buildingName: String = "") {
+        val fragment = if (buildingName.isNotEmpty()) {
+            ClassroomsFragment.newInstance(buildingName)
+        } else {
+            ClassroomsFragment()
+        }
+        replaceFragment(fragment)
+        binding.bottomNavigation.selectedItemId = R.id.nav_classrooms
     }
 
     fun replaceFragment(fragment: Fragment) {

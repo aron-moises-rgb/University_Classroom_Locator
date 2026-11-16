@@ -58,6 +58,7 @@ class ClassroomsFragment : Fragment() {
     // Default filter to "All Buildings" and "Floor 1"
     private var selectedBuilding: String = "All Buildings"
     private var selectedFloor: Int? = 1
+    private var isBuildingFilterProgrammatic = false
 
     private var allClassesList = listOf<ClassroomUiModel>()
 
@@ -72,6 +73,18 @@ class ClassroomsFragment : Fragment() {
         }
     }
 
+    companion object {
+        private const val ARG_BUILDING_NAME = "arg_building_name"
+
+        fun newInstance(buildingName: String = ""): ClassroomsFragment {
+            val fragment = ClassroomsFragment()
+            val args = Bundle()
+            args.putString(ARG_BUILDING_NAME, buildingName)
+            fragment.arguments = args
+            return fragment
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -82,6 +95,11 @@ class ClassroomsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val initialBldg = arguments?.getString(ARG_BUILDING_NAME)
+        if (!initialBldg.isNullOrEmpty()) {
+            selectedBuilding = initialBldg
+        }
 
         rvClassrooms = view.findViewById(R.id.rvClassrooms)
         chipGroupBuildings = view.findViewById(R.id.chipGroupBuildings)
@@ -116,18 +134,37 @@ class ClassroomsFragment : Fragment() {
         buildingsListener = buildingRepo.listenToBuildings(
             onUpdate = { buildingsFromDb ->
                 if (isAdded) {
+                    val targetBuilding = selectedBuilding
+                    isBuildingFilterProgrammatic = true
                     chipGroupBuildings.removeAllViews()
 
+                    var targetChipId: Int? = null
+
                     // Always add "All Buildings" chip first
-                    val allChip = createChip("All Buildings", selectedBuilding == "All Buildings")
+                    val allChip = createChip("All Buildings")
+                    if (targetBuilding.equals("All Buildings", ignoreCase = true)) {
+                        targetChipId = allChip.id
+                    }
                     chipGroupBuildings.addView(allChip)
 
                     // Dynamically add chips for every building in Firestore
                     buildingsFromDb.forEach { bldg ->
                         val bName = bldg.name.ifEmpty { "Building" }
-                        val bChip = createChip(bName, selectedBuilding.equals(bName, ignoreCase = true))
+                        val bChip = createChip(bName)
+                        if (targetBuilding.trim().equals(bName.trim(), ignoreCase = true)) {
+                            targetChipId = bChip.id
+                        }
                         chipGroupBuildings.addView(bChip)
                     }
+
+                    if (targetChipId != null) {
+                        chipGroupBuildings.check(targetChipId)
+                    } else {
+                        chipGroupBuildings.check(allChip.id)
+                    }
+
+                    isBuildingFilterProgrammatic = false
+                    filterClassrooms()
                 }
             },
             onError = { e ->
@@ -136,12 +173,11 @@ class ClassroomsFragment : Fragment() {
         )
     }
 
-    private fun createChip(label: String, isChecked: Boolean): Chip {
+    private fun createChip(label: String): Chip {
         return Chip(requireContext()).apply {
             id = View.generateViewId()
             text = label
             isCheckable = true
-            this.isChecked = isChecked
             setChipBackgroundColorResource(R.color.chip_background_selector)
             setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector))
         }
@@ -247,15 +283,25 @@ class ClassroomsFragment : Fragment() {
         val activeFloor = if (selectedFloor in availableFloors) selectedFloor else (availableFloors.firstOrNull() ?: 1)
         selectedFloor = activeFloor
 
+        var matchingFloorChipId: Int? = null
+
         availableFloors.forEach { fNum ->
             val fLabel = "Floor $fNum"
-            val fChip = createChip(fLabel, selectedFloor == fNum)
+            val fChip = createChip(fLabel)
+            if (selectedFloor == fNum) {
+                matchingFloorChipId = fChip.id
+            }
             chipGroupFloors.addView(fChip)
+        }
+
+        if (matchingFloorChipId != null) {
+            chipGroupFloors.check(matchingFloorChipId!!)
         }
     }
 
     private fun setupFilterListeners() {
         chipGroupBuildings.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (isBuildingFilterProgrammatic) return@setOnCheckedStateChangeListener
             if (checkedIds.isNotEmpty()) {
                 val checkedChip = group.findViewById<Chip>(checkedIds[0])
                 selectedBuilding = checkedChip?.text?.toString() ?: "All Buildings"

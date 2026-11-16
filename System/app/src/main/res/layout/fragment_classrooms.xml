@@ -92,7 +92,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Building Selector Chips -->
+            <!-- Building Selector Chips (Populated dynamically) -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -102,40 +102,11 @@
                     android:id="@+id/chipGroupBuildings"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAllBuildings"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All Buildings"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBuildingA"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Building A"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBuildingB"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="Building B"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-                </com.google.android.material.chip.ChipGroup>
+                    app:selectionRequired="false"
+                    app:singleSelection="true" />
             </HorizontalScrollView>
 
-            <!-- Floor Selector Chips -->
+            <!-- Floor Selector Chips (Populated dynamically) -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -146,37 +117,8 @@
                     android:id="@+id/chipGroupFloors"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFloor1"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Floor 1"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFloor2"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="Floor 2"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFloor3"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Floor 3"
-                        android:textColor="@color/chip_text_selector"
-                        app:chipBackgroundColor="@color/chip_background_selector" />
-                </com.google.android.material.chip.ChipGroup>
+                    app:selectionRequired="false"
+                    app:singleSelection="true" />
             </HorizontalScrollView>
 
             <!-- Building Subheader Info Bar -->
