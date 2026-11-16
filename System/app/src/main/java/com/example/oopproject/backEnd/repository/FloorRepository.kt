@@ -1,10 +1,27 @@
 package com.example.oopproject.backEnd.repository
+
 import com.example.oopproject.backEnd.data.Floor
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 class FloorRepository {
     private val db = FirebaseFirestore.getInstance()
     private val floors = db.collection("floors")
+
+    fun listenToFloors(
+        onUpdate: (List<Floor>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return floors.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                onError(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                onUpdate(snapshot.toObjects(Floor::class.java))
+            }
+        }
+    }
 
     fun getFloorsByBuilding(
         buildingId: String,

@@ -15,10 +15,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
 import com.example.oopproject.backEnd.data.Classroom
+import com.example.oopproject.backEnd.data.Floor
 import com.example.oopproject.backEnd.data.Schedule
 import com.example.oopproject.backEnd.data.enums.RoomStatus
 import com.example.oopproject.backEnd.repository.BuildingRepository
 import com.example.oopproject.backEnd.repository.ClassroomRepository
+import com.example.oopproject.backEnd.repository.FloorRepository
 import com.example.oopproject.backEnd.repository.ScheduleRepository
 import com.example.oopproject.backEnd.service.AvailabilityService
 import com.example.oopproject.frontEnd.adapters.ClassroomAdapter
@@ -45,14 +47,17 @@ class ClassroomsFragment : Fragment() {
 
     private val classroomRepo = ClassroomRepository()
     private val buildingRepo = BuildingRepository()
+    private val floorRepo = FloorRepository()
     private val scheduleRepo = ScheduleRepository()
     private val availabilityService = AvailabilityService()
 
     private var classroomsListener: ListenerRegistration? = null
     private var buildingsListener: ListenerRegistration? = null
+    private var floorsListener: ListenerRegistration? = null
     private var schedulesListener: ListenerRegistration? = null
 
     private var rawClassroomsFromDb = listOf<Classroom>()
+    private var rawFloorsFromDb = listOf<Floor>()
     private var rawSchedulesFromDb = listOf<Schedule>()
 
     // Default filter to "All Buildings" and "Floor 1"
@@ -195,6 +200,17 @@ class ClassroomsFragment : Fragment() {
             }
         )
 
+        // Listen to Floors via FloorRepository
+        floorsListener = floorRepo.listenToFloors(
+            onUpdate = { floorsFromDb ->
+                rawFloorsFromDb = floorsFromDb
+                recalculateAvailabilityAndRefreshUi()
+            },
+            onError = { e ->
+                Log.e("ClassroomsFragment", "Floors listener error: ${e.message}")
+            }
+        )
+
         // Listen to Schedules
         schedulesListener = scheduleRepo.listenToSchedules(
             onUpdate = { schedulesFromDb ->
@@ -226,6 +242,15 @@ class ClassroomsFragment : Fragment() {
                 } else {
                     fNum = 1
                 }
+            }
+
+            val matchingFloor = rawFloorsFromDb.find { fl ->
+                fl.buildingId.equals(room.buildingId, ignoreCase = true) && fl.floorNumber == fNum
+            }
+            val floorLabel = if (matchingFloor != null && matchingFloor.name.isNotEmpty()) {
+                matchingFloor.name
+            } else {
+                "Floor $fNum"
             }
 
             val bName = room.buildingId.ifEmpty { "Main Building" }
@@ -260,7 +285,7 @@ class ClassroomsFragment : Fragment() {
                 roomName = room.roomNumber.ifEmpty { "Classroom" },
                 buildingName = bName,
                 floorNumber = fNum,
-                roomSubtitle = "Floor $fNum • Capacity: ${room.capacity} seats • $bName",
+                roomSubtitle = "$floorLabel • Capacity: ${room.capacity} seats • $bName",
                 statusType = uiStatusType,
                 statusText = uiStatusText,
                 bannerTitle = availability.bannerTitle,
@@ -295,7 +320,7 @@ class ClassroomsFragment : Fragment() {
         }
 
         if (matchingFloorChipId != null) {
-            chipGroupFloors.check(matchingFloorChipId!!)
+            chipGroupFloors.check(matchingFloorChipId)
         }
     }
 
@@ -353,6 +378,7 @@ class ClassroomsFragment : Fragment() {
         timeUpdateHandler.removeCallbacks(timeUpdateRunnable)
         classroomsListener?.remove()
         buildingsListener?.remove()
+        floorsListener?.remove()
         schedulesListener?.remove()
     }
 }
