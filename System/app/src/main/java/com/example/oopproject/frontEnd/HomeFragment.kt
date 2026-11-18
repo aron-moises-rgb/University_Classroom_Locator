@@ -1,16 +1,21 @@
 package com.example.oopproject.frontEnd
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import com.example.oopproject.R
 import com.example.oopproject.backEnd.data.Building
 import com.example.oopproject.backEnd.data.Classroom
 import com.example.oopproject.backEnd.data.Schedule
 import com.example.oopproject.backEnd.data.enums.RoomStatus
+import com.example.oopproject.backEnd.constants.CampusBuildings
 import com.example.oopproject.backEnd.service.AvailabilityService
 import com.example.oopproject.databinding.FragmentHomeBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -38,6 +43,21 @@ class HomeFragment : Fragment() {
 
     private var currentUserRole: String = "Student"
 
+    private val timeHandler = Handler(Looper.getMainLooper())
+    private val timeRunnable = object : Runnable {
+        override fun run() {
+            if (_binding != null && isAdded) {
+                val now = LocalTime.now(ZoneId.of("Asia/Manila"))
+                val dateNow = LocalDate.now(ZoneId.of("Asia/Manila"))
+                val formattedTime = now.format(DateTimeFormatter.ofPattern("hh:mm:ss a"))
+                val formattedDay = dateNow.format(DateTimeFormatter.ofPattern("EEEE"))
+
+                binding.tvLiveTimeAndDay.text = "🕒 $formattedTime • $formattedDay"
+            }
+            timeHandler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -57,6 +77,7 @@ class HomeFragment : Fragment() {
 
         loadUserProfile()
         loadLiveCampusStats()
+        timeHandler.post(timeRunnable)
 
         // Quick Action Shortcuts
         binding.btnExploreClassrooms.setOnClickListener {
@@ -110,17 +131,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadLiveCampusStats() {
-        // 1. Buildings Count
-        buildingsListener = db.collection("buildings").addSnapshotListener { snapshot, e ->
-            if (e != null) {
-                Log.e("HomeFragment", "Buildings error: ${e.message}")
-                return@addSnapshotListener
-            }
-            if (_binding != null && snapshot != null) {
-                val buildingsList = snapshot.toObjects(Building::class.java)
-                binding.tvBuildingsCount.text = buildingsList.size.toString()
-            }
-        }
+        // 1. Buildings Count (Static Campus Constants)
+        binding.tvBuildingsCount.text = CampusBuildings.COUNT.toString()
 
         // 2. Classrooms Count & Data
         classroomsListener = db.collection("classrooms").addSnapshotListener { snapshot, e ->
@@ -181,6 +193,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        timeHandler.removeCallbacks(timeRunnable)
         buildingsListener?.remove()
         classroomsListener?.remove()
         schedulesListener?.remove()

@@ -7,6 +7,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.graphics.Color
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -14,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.constants.CampusBuildings
 import com.example.oopproject.backEnd.data.Classroom
 import com.example.oopproject.backEnd.data.Floor
 import com.example.oopproject.backEnd.data.Schedule
@@ -26,6 +29,7 @@ import com.example.oopproject.backEnd.service.AvailabilityService
 import com.example.oopproject.frontEnd.adapters.ClassroomAdapter
 import com.example.oopproject.frontEnd.models.ClassroomUiModel
 import com.example.oopproject.frontEnd.models.RoomStatusType
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.firebase.firestore.ListenerRegistration
@@ -119,63 +123,56 @@ class ClassroomsFragment : Fragment() {
         adapter = ClassroomAdapter(
             items = emptyList(),
             onDetailsClick = { room ->
-                Toast.makeText(requireContext(), "Details for ${room.roomName}", Toast.LENGTH_SHORT).show()
+                showClassroomDetailsBottomSheet(room)
             },
             onLocateOnMapClick = { room ->
-                Toast.makeText(requireContext(), "Locating ${room.roomName} on Campus Map...", Toast.LENGTH_SHORT).show()
+                val homeActivity = activity as? HomePage
+                homeActivity?.navigateToMap(room.buildingName)
             }
         )
         rvClassrooms.adapter = adapter
 
         setupFilterListeners()
-        loadRealtimeBuildings()
+        setupBuildingChips()
         loadRealtimeClassroomsAndSchedules()
 
         // Start precision-synchronized system clock timer
         timeUpdateHandler.post(timeUpdateRunnable)
     }
 
-    private fun loadRealtimeBuildings() {
-        buildingsListener = buildingRepo.listenToBuildings(
-            onUpdate = { buildingsFromDb ->
-                if (isAdded) {
-                    val targetBuilding = selectedBuilding
-                    isBuildingFilterProgrammatic = true
-                    chipGroupBuildings.removeAllViews()
+    private fun setupBuildingChips() {
+        if (!isAdded) return
+        val targetBuilding = selectedBuilding
+        isBuildingFilterProgrammatic = true
+        chipGroupBuildings.removeAllViews()
 
-                    var targetChipId: Int? = null
+        var targetChipId: Int? = null
 
-                    // Always add "All Buildings" chip first
-                    val allChip = createChip("All Buildings")
-                    if (targetBuilding.equals("All Buildings", ignoreCase = true)) {
-                        targetChipId = allChip.id
-                    }
-                    chipGroupBuildings.addView(allChip)
+        // Always add "All Buildings" chip first
+        val allChip = createChip("All Buildings")
+        if (targetBuilding.equals("All Buildings", ignoreCase = true)) {
+            targetChipId = allChip.id
+        }
+        chipGroupBuildings.addView(allChip)
 
-                    // Dynamically add chips for every building in Firestore
-                    buildingsFromDb.forEach { bldg ->
-                        val bName = bldg.name.ifEmpty { "Building" }
-                        val bChip = createChip(bName)
-                        if (targetBuilding.trim().equals(bName.trim(), ignoreCase = true)) {
-                            targetChipId = bChip.id
-                        }
-                        chipGroupBuildings.addView(bChip)
-                    }
-
-                    if (targetChipId != null) {
-                        chipGroupBuildings.check(targetChipId)
-                    } else {
-                        chipGroupBuildings.check(allChip.id)
-                    }
-
-                    isBuildingFilterProgrammatic = false
-                    filterClassrooms()
-                }
-            },
-            onError = { e ->
-                Log.e("ClassroomsFragment", "Building listener error: ${e.message}")
+        // Add chips for campus building constants
+        CampusBuildings.ALL.forEach { bldg ->
+            val bName = bldg.name
+            val bChip = createChip(bName)
+            if (targetBuilding.trim().equals(bName.trim(), ignoreCase = true)) {
+                targetChipId = bChip.id
             }
-        )
+            chipGroupBuildings.addView(bChip)
+        }
+
+        if (targetChipId != null) {
+            chipGroupBuildings.check(targetChipId)
+        } else {
+            chipGroupBuildings.check(allChip.id)
+        }
+
+        isBuildingFilterProgrammatic = false
+        filterClassrooms()
     }
 
     private fun createChip(label: String): Chip {
@@ -229,7 +226,8 @@ class ClassroomsFragment : Fragment() {
 
         if (::tvLiveSyncTime.isInitialized) {
             val formattedTime = currentTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
-            tvLiveSyncTime.text = "Live Sync: $formattedTime"
+            val formattedDay = currentDay.name.lowercase().replaceFirstChar { it.uppercase() }
+            tvLiveSyncTime.text = "Live Sync: $formattedTime • $formattedDay"
         }
 
         val firestoreModels = rawClassroomsFromDb.map { room ->
@@ -257,8 +255,7 @@ class ClassroomsFragment : Fragment() {
 
             // Get schedules for this room
             val roomSchedules = rawSchedulesFromDb.filter { sch ->
-                sch.classroomId.equals(room.classroomId, ignoreCase = true) ||
-                sch.classroomId.equals(room.roomNumber, ignoreCase = true)
+                availabilityService.isScheduleForRoom(sch, room.classroomId, room.roomNumber)
             }
 
             // Calculate live availability with AvailabilityService
@@ -304,10 +301,11 @@ class ClassroomsFragment : Fragment() {
         if (!isAdded) return
         chipGroupFloors.removeAllViews()
 
-        // Discover all unique floor numbers present in Firestore classrooms
-        val availableFloors = allClassesList.map { it.floorNumber }.distinct().sorted()
+        val bldgConstant = CampusBuildings.findByName(selectedBuilding)
+        val maxFloors = bldgConstant?.totalFloors ?: 4
+        val availableFloors = (1..maxFloors).toList()
 
-        val activeFloor = if (selectedFloor in availableFloors) selectedFloor else (availableFloors.firstOrNull() ?: 1)
+        val activeFloor = if (selectedFloor != null && selectedFloor!! in availableFloors) selectedFloor else 1
         selectedFloor = activeFloor
 
         var matchingFloorChipId: Int? = null
@@ -335,6 +333,7 @@ class ClassroomsFragment : Fragment() {
             } else {
                 selectedBuilding = "All Buildings"
             }
+            updateDynamicFloorChips()
             filterClassrooms()
         }
 
@@ -373,6 +372,115 @@ class ClassroomsFragment : Fragment() {
         tvFacilitiesCount.text = "${filteredList.size} Facilities"
 
         adapter.updateClassrooms(filteredList)
+    }
+
+    private fun showClassroomDetailsBottomSheet(roomUi: ClassroomUiModel) {
+        val dialog = BottomSheetDialog(requireContext())
+        val dialogView = layoutInflater.inflate(R.layout.dialog_classroom_details, null)
+        dialog.setContentView(dialogView)
+
+        val tvDetailRoomName = dialogView.findViewById<TextView>(R.id.tvDetailRoomName)
+        val tvDetailBuilding = dialogView.findViewById<TextView>(R.id.tvDetailBuilding)
+        val tvDetailStatusBadge = dialogView.findViewById<TextView>(R.id.tvDetailStatusBadge)
+        val tvDetailFloor = dialogView.findViewById<TextView>(R.id.tvDetailFloor)
+        val tvDetailCapacity = dialogView.findViewById<TextView>(R.id.tvDetailCapacity)
+        val tvScheduleHeaderTitle = dialogView.findViewById<TextView>(R.id.tvScheduleHeaderTitle)
+        val llScheduleContainer = dialogView.findViewById<LinearLayout>(R.id.llScheduleContainer)
+        val tvNoSchedules = dialogView.findViewById<TextView>(R.id.tvNoSchedules)
+        val llUpcomingScheduleContainer = dialogView.findViewById<LinearLayout>(R.id.llUpcomingScheduleContainer)
+        val tvNoUpcomingSchedules = dialogView.findViewById<TextView>(R.id.tvNoUpcomingSchedules)
+        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
+
+        val rawRoom = rawClassroomsFromDb.find { 
+            it.classroomId.equals(roomUi.roomId, ignoreCase = true) || 
+            it.roomNumber.equals(roomUi.roomName, ignoreCase = true) 
+        }
+        val capacityText = if (rawRoom != null && rawRoom.capacity > 0) "${rawRoom.capacity} Seats" else "30-40 Seats"
+
+        tvDetailRoomName.text = roomUi.roomName
+        tvDetailBuilding.text = roomUi.buildingName
+        tvDetailFloor.text = "Floor ${roomUi.floorNumber}"
+        tvDetailCapacity.text = capacityText
+        tvDetailStatusBadge.text = roomUi.statusText
+
+        when (roomUi.statusType) {
+            RoomStatusType.AVAILABLE -> {
+                tvDetailStatusBadge.setBackgroundColor(Color.parseColor("#DCFCE7"))
+                tvDetailStatusBadge.setTextColor(Color.parseColor("#15803D"))
+            }
+            RoomStatusType.OCCUPIED -> {
+                tvDetailStatusBadge.setBackgroundColor(Color.parseColor("#FEE2E2"))
+                tvDetailStatusBadge.setTextColor(Color.parseColor("#B91C1C"))
+            }
+            RoomStatusType.UPCOMING -> {
+                tvDetailStatusBadge.setBackgroundColor(Color.parseColor("#DBEAFE"))
+                tvDetailStatusBadge.setTextColor(Color.parseColor("#1D4ED8"))
+            }
+            RoomStatusType.CLOSED -> {
+                tvDetailStatusBadge.setBackgroundColor(Color.parseColor("#F3F4F6"))
+                tvDetailStatusBadge.setTextColor(Color.parseColor("#4B5563"))
+            }
+        }
+
+        val currentDay = availabilityService.getCurrentDayOfWeek()
+        tvScheduleHeaderTitle.text = "${currentDay.name} SCHEDULE & INSTRUCTORS"
+
+        val todaySchedules = rawSchedulesFromDb.filter { sch ->
+            availabilityService.isScheduleForRoom(sch, roomUi.roomId, roomUi.roomName) &&
+            availabilityService.isScheduleForDay(sch, currentDay)
+        }.sortedBy { it.startTime }
+
+        if (todaySchedules.isEmpty()) {
+            tvNoSchedules.visibility = View.VISIBLE
+        } else {
+            tvNoSchedules.visibility = View.GONE
+            todaySchedules.forEach { schedule ->
+                val rowView = layoutInflater.inflate(R.layout.item_detail_schedule_row, llScheduleContainer, false)
+                val tvDayBadge = rowView.findViewById<TextView>(R.id.tvDayBadge)
+                val tvSubject = rowView.findViewById<TextView>(R.id.tvSubject)
+                val tvTime = rowView.findViewById<TextView>(R.id.tvTime)
+                val tvInstructor = rowView.findViewById<TextView>(R.id.tvInstructor)
+
+                tvDayBadge.text = "TODAY"
+                tvSubject.text = schedule.subject.ifEmpty { "Class Session" }
+                tvTime.text = "${schedule.startTime} - ${schedule.endTime}"
+                tvInstructor.text = schedule.instructor.ifEmpty { "Unassigned" }
+
+                llScheduleContainer.addView(rowView)
+            }
+        }
+
+        // Render Upcoming Classes for rest of the week
+        val upcomingSchedules = rawSchedulesFromDb.filter { sch ->
+            availabilityService.isScheduleForRoom(sch, roomUi.roomId, roomUi.roomName) &&
+            !availabilityService.isScheduleForDay(sch, currentDay)
+        }.sortedWith(compareBy({ it.day.ordinal }, { it.startTime }))
+
+        if (upcomingSchedules.isEmpty()) {
+            tvNoUpcomingSchedules.visibility = View.VISIBLE
+        } else {
+            tvNoUpcomingSchedules.visibility = View.GONE
+            upcomingSchedules.forEach { schedule ->
+                val rowView = layoutInflater.inflate(R.layout.item_detail_schedule_row, llUpcomingScheduleContainer, false)
+                val tvDayBadge = rowView.findViewById<TextView>(R.id.tvDayBadge)
+                val tvSubject = rowView.findViewById<TextView>(R.id.tvSubject)
+                val tvTime = rowView.findViewById<TextView>(R.id.tvTime)
+                val tvInstructor = rowView.findViewById<TextView>(R.id.tvInstructor)
+
+                tvDayBadge.text = schedule.day.name
+                tvDayBadge.setBackgroundColor(Color.parseColor("#EEF2FF"))
+                tvDayBadge.setTextColor(Color.parseColor("#312E81"))
+
+                tvSubject.text = schedule.subject.ifEmpty { "Class Session" }
+                tvTime.text = "${schedule.startTime} - ${schedule.endTime}"
+                tvInstructor.text = schedule.instructor.ifEmpty { "Unassigned" }
+
+                llUpcomingScheduleContainer.addView(rowView)
+            }
+        }
+
+        btnCloseDialog.setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     override fun onDestroyView() {

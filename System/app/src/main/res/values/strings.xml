@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OOP Project</string>
+    <string name="app_name">UniFind</string>
     <string name="login">Login</string>
     <string name="welcome">Welcome!</string>
     <string name="sign_out">Sign out</string>

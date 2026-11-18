@@ -16,6 +16,7 @@ class HomePage : AppCompatActivity() {
     private lateinit var binding: ActivityHomePageBinding
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
+    private var isProgrammaticNav = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +44,8 @@ class HomePage : AppCompatActivity() {
         // Bottom Navigation setup
         binding.bottomNavigation.selectedItemId = R.id.nav_home
         binding.bottomNavigation.setOnItemSelectedListener { item ->
+            if (isProgrammaticNav) return@setOnItemSelectedListener true
+
             val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
             when (item.itemId) {
                 R.id.nav_home -> {
@@ -84,6 +87,7 @@ class HomePage : AppCompatActivity() {
     }
 
     fun navigateToClassrooms(buildingName: String = "") {
+        isProgrammaticNav = true
         val fragment = if (buildingName.isNotEmpty()) {
             ClassroomsFragment.newInstance(buildingName)
         } else {
@@ -91,16 +95,14 @@ class HomePage : AppCompatActivity() {
         }
         replaceFragment(fragment)
         binding.bottomNavigation.selectedItemId = R.id.nav_classrooms
+        isProgrammaticNav = false
     }
 
-    fun navigateToMap() {
-        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
-        if (currentFragment !is CampusMapFragment) {
-            replaceFragment(CampusMapFragment())
-        }
-        if (binding.bottomNavigation.selectedItemId != R.id.nav_map) {
-            binding.bottomNavigation.selectedItemId = R.id.nav_map
-        }
+    fun navigateToMap(buildingName: String = "") {
+        isProgrammaticNav = true
+        replaceFragment(CampusMapFragment.newInstance(buildingName))
+        binding.bottomNavigation.selectedItemId = R.id.nav_map
+        isProgrammaticNav = false
     }
 
     fun replaceFragment(fragment: Fragment) {

@@ -5,6 +5,7 @@ import com.example.oopproject.backEnd.data.enums.DayOfWeek
 import com.example.oopproject.backEnd.data.enums.RoomStatus
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 
 data class AvailabilityResult(
     val status: RoomStatus,
@@ -15,12 +16,29 @@ data class AvailabilityResult(
 class AvailabilityService {
 
     fun getCurrentDayOfWeek(): DayOfWeek {
-        val dayName = LocalDate.now().dayOfWeek.name
+        val zone = ZoneId.of("Asia/Manila")
+        val dayName = LocalDate.now(zone).dayOfWeek.name
         return try {
             DayOfWeek.valueOf(dayName)
         } catch (_: Exception) {
-            DayOfWeek.MONDAY
+            DayOfWeek.WEDNESDAY
         }
+    }
+
+    fun isScheduleForDay(schedule: Schedule, targetDay: DayOfWeek): Boolean {
+        return schedule.day == targetDay || 
+               schedule.day.name.equals(targetDay.name, ignoreCase = true)
+    }
+
+    fun isScheduleForRoom(schedule: Schedule, roomId: String, roomNumber: String): Boolean {
+        val sId = schedule.classroomId.trim().lowercase()
+        val rId = roomId.trim().lowercase()
+        val rNum = roomNumber.trim().lowercase()
+
+        if (sId.isEmpty()) return false
+        return sId == rId || sId == rNum || 
+               (rId.isNotEmpty() && rId.contains(sId)) || 
+               (rNum.isNotEmpty() && (rNum.contains(sId) || sId.contains(rNum)))
     }
 
     fun calculateAvailability(
@@ -41,7 +59,7 @@ class AvailabilityService {
             )
         }
 
-        val todaysSchedules = schedules.filter { it.day == currentDay }
+        val todaysSchedules = schedules.filter { isScheduleForDay(it, currentDay) }
 
         // 1. Check if room is currently OCCUPIED
         for (schedule in todaysSchedules) {

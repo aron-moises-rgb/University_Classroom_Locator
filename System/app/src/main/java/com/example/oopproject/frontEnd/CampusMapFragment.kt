@@ -29,6 +29,18 @@ import java.io.InputStreamReader
 
 class CampusMapFragment : Fragment() {
 
+    companion object {
+        private const val ARG_TARGET_BUILDING = "target_building"
+
+        fun newInstance(targetBuilding: String = ""): CampusMapFragment {
+            val fragment = CampusMapFragment()
+            val args = Bundle()
+            args.putString(ARG_TARGET_BUILDING, targetBuilding)
+            fragment.arguments = args
+            return fragment
+        }
+    }
+
     private var _binding: FragmentCampusMapBinding? = null
     private val binding get() = _binding!!
 
@@ -39,6 +51,7 @@ class CampusMapFragment : Fragment() {
     private var lastUserLat: Double = 0.0
     private var lastUserLng: Double = 0.0
     private var isMapLoaded = false
+    private var targetBuilding: String = ""
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -64,6 +77,7 @@ class CampusMapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        targetBuilding = arguments?.getString(ARG_TARGET_BUILDING) ?: ""
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         setupWebView()
@@ -162,6 +176,7 @@ class CampusMapFragment : Fragment() {
 
                     let userMarker = null;
                     let userAccuracyCircle = null;
+                    const buildingMarkers = [];
 
                     function loadKmlData(kmlString) {
                         try {
@@ -191,7 +206,7 @@ class CampusMapFragment : Fragment() {
                                                 iconAnchor: [0, 0]
                                             });
                                             const marker = L.marker([lat, lng], { icon: buildingTextIcon }).addTo(map);
-                                            marker.bindPopup('<div class="map-popup"><h3>🏛️ ' + name + '</h3><p>Tap for details &amp; room availability.</p></div>');
+                                            buildingMarkers.push({ name: name, latLng: [lat, lng], marker: marker });
                                         }
                                     }
                                 }
@@ -266,6 +281,18 @@ class CampusMapFragment : Fragment() {
                         }
                     }
 
+                    function focusBuilding(targetName) {
+                        if (!targetName) return;
+                        const cleanTarget = targetName.toLowerCase().replace("building", "").trim();
+                        for (let i = 0; i < buildingMarkers.length; i++) {
+                            const item = buildingMarkers[i];
+                            if (item.name.toLowerCase().includes(cleanTarget) || cleanTarget.includes(item.name.toLowerCase())) {
+                                map.setView(item.latLng, 19.5);
+                                break;
+                            }
+                        }
+                    }
+
                     function updateUserLocation(lat, lng) {
                         const latLng = [lat, lng];
                         if (!userMarker) {
@@ -308,6 +335,11 @@ class CampusMapFragment : Fragment() {
             val kmlString = reader.use { it.readText() }
             val escapedKml = JSONObject.quote(kmlString)
             binding.webViewMap.evaluateJavascript("loadKmlData($escapedKml);", null)
+
+            if (targetBuilding.isNotEmpty()) {
+                val escapedTarget = JSONObject.quote(targetBuilding)
+                binding.webViewMap.evaluateJavascript("focusBuilding($escapedTarget);", null)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -379,8 +411,6 @@ class CampusMapFragment : Fragment() {
             updateMapUserLocation(lastUserLat, lastUserLng)
         }
 
-        // Check distance to campus center (14.06679, 120.62613)
-        // Campus max radius ~180 meters + 10 meters buffer = 190 meters
         val campusCenterLat = 14.06679
         val campusCenterLng = 120.62613
 

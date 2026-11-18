@@ -34,7 +34,7 @@ class AdminClassroomAdapter(
 
         holder.tvRoomName.text = item.roomNumber.ifEmpty { "Classroom" }
         holder.tvRoomSubtitle.text = "Building: ${item.buildingId} • Floor ${item.floorId.ifEmpty { "1" }} • Capacity: ${item.capacity} seats"
-        holder.tvRoomId.text = "ID: ${item.classroomId}"
+        holder.tvRoomId.visibility = View.GONE
 
         holder.btnEdit.setOnClickListener { onEditClick(item) }
         holder.btnDelete.setOnClickListener { onDeleteClick(item) }

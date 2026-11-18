@@ -11,6 +11,7 @@ import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -25,6 +26,8 @@ import com.example.oopproject.backEnd.util.ScheduleSeeder
 import com.example.oopproject.databinding.DialogAddEditScheduleBinding
 import com.example.oopproject.frontEnd.adapters.ScheduleAdapter
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import java.time.LocalTime
@@ -34,6 +37,7 @@ class ManageSchedulesFragment : Fragment() {
     private lateinit var rvSchedules: RecyclerView
     private lateinit var btnAddSchedule: MaterialButton
     private lateinit var btnBack: ImageButton
+    private lateinit var chipGroupDayFilter: ChipGroup
 
     private lateinit var adapter: ScheduleAdapter
     private val scheduleRepo = ScheduleRepository()
@@ -43,6 +47,8 @@ class ManageSchedulesFragment : Fragment() {
     private val db = FirebaseFirestore.getInstance()
 
     private var schedulesListener: ListenerRegistration? = null
+    private var rawSchedulesList = listOf<Schedule>()
+    private var selectedDayFilter = "All Days"
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,6 +64,7 @@ class ManageSchedulesFragment : Fragment() {
         rvSchedules = view.findViewById(R.id.rvSchedules)
         btnAddSchedule = view.findViewById(R.id.btnAddSchedule)
         btnBack = view.findViewById(R.id.btnBack)
+        chipGroupDayFilter = view.findViewById(R.id.chipGroupDayFilter)
 
         rvSchedules.layoutManager = LinearLayoutManager(requireContext())
 
@@ -81,7 +88,57 @@ class ManageSchedulesFragment : Fragment() {
             showAddEditScheduleDialog(null)
         }
 
+        setupDayFilterChips()
         loadSchedules()
+    }
+
+    private fun setupDayFilterChips() {
+        chipGroupDayFilter.removeAllViews()
+
+        val dayOptions = listOf("All Days") + DayOfWeek.values().map { it.name }
+        var defaultChipId: Int? = null
+
+        dayOptions.forEach { dName ->
+            val chip = Chip(requireContext()).apply {
+                text = dName
+                isCheckable = true
+                isClickable = true
+                setChipBackgroundColorResource(R.color.chip_background_selector)
+                setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector))
+                chipStrokeWidth = 0f
+            }
+
+            if (dName.equals(selectedDayFilter, ignoreCase = true)) {
+                defaultChipId = chip.id
+            }
+
+            chipGroupDayFilter.addView(chip)
+        }
+
+        if (defaultChipId != null) {
+            chipGroupDayFilter.check(defaultChipId!!)
+        }
+
+        chipGroupDayFilter.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val checkedChip = group.findViewById<Chip>(checkedIds[0])
+                selectedDayFilter = checkedChip?.text?.toString() ?: "All Days"
+            } else {
+                selectedDayFilter = "All Days"
+            }
+            filterSchedulesList()
+        }
+    }
+
+    private fun filterSchedulesList() {
+        val filtered = if (selectedDayFilter.trim().equals("All Days", ignoreCase = true)) {
+            rawSchedulesList
+        } else {
+            rawSchedulesList.filter { schedule ->
+                schedule.day.name.equals(selectedDayFilter.trim(), ignoreCase = true)
+            }
+        }
+        adapter.updateSchedules(filtered)
     }
 
     private fun loadSchedules() {
@@ -104,7 +161,8 @@ class ManageSchedulesFragment : Fragment() {
                         }
                     )
                 }
-                adapter.updateSchedules(schedulesFromDb)
+                rawSchedulesList = schedulesFromDb
+                filterSchedulesList()
             }
         }
     }

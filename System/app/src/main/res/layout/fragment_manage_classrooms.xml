@@ -66,6 +66,21 @@
             android:paddingTop="16dp"
             android:paddingBottom="100dp">
 
+            <!-- Building Filter Chips -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupBuildingFilter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+
             <!-- Realtime RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvClassrooms"

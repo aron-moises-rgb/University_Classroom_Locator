@@ -11,16 +11,20 @@ import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
+import com.example.oopproject.backEnd.constants.CampusBuildings
 import com.example.oopproject.backEnd.data.Classroom
 import com.example.oopproject.backEnd.repository.BuildingRepository
 import com.example.oopproject.backEnd.repository.ClassroomRepository
 import com.example.oopproject.databinding.DialogAddEditClassroomBinding
 import com.example.oopproject.frontEnd.adapters.AdminClassroomAdapter
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.firebase.firestore.ListenerRegistration
 
 class ManageClassroomsFragment : Fragment() {
@@ -28,12 +32,15 @@ class ManageClassroomsFragment : Fragment() {
     private lateinit var rvClassrooms: RecyclerView
     private lateinit var btnAddClassroom: MaterialButton
     private lateinit var btnBack: ImageButton
+    private lateinit var chipGroupBuildingFilter: ChipGroup
 
     private lateinit var adapter: AdminClassroomAdapter
     private val classroomRepo = ClassroomRepository()
     private val buildingRepo = BuildingRepository()
 
     private var classroomsListener: ListenerRegistration? = null
+    private var rawClassroomsList = listOf<Classroom>()
+    private var selectedBuildingFilter = "All Buildings"
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,6 +56,7 @@ class ManageClassroomsFragment : Fragment() {
         rvClassrooms = view.findViewById(R.id.rvClassrooms)
         btnAddClassroom = view.findViewById(R.id.btnAddClassroom)
         btnBack = view.findViewById(R.id.btnBack)
+        chipGroupBuildingFilter = view.findViewById(R.id.chipGroupBuildingFilter)
 
         rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
 
@@ -72,10 +80,13 @@ class ManageClassroomsFragment : Fragment() {
             showAddEditClassroomDialog(null)
         }
 
+        setupBuildingFilterChips()
+
         // Start Realtime Listener for Classrooms in Firestore
         classroomsListener = classroomRepo.listenToClassrooms(
             onUpdate = { classroomsFromDb ->
-                adapter.updateClassrooms(classroomsFromDb)
+                rawClassroomsList = classroomsFromDb
+                filterClassroomsList()
             },
             onError = { e ->
                 Log.e("ManageClassrooms", "Firestore permission error: ${e.message}")
@@ -83,33 +94,66 @@ class ManageClassroomsFragment : Fragment() {
         )
     }
 
+    private fun setupBuildingFilterChips() {
+        chipGroupBuildingFilter.removeAllViews()
+
+        val buildingOptions = listOf("All Buildings") + CampusBuildings.names()
+        var defaultChipId: Int? = null
+
+        buildingOptions.forEach { bName ->
+            val chip = Chip(requireContext()).apply {
+                text = bName
+                isCheckable = true
+                isClickable = true
+                setChipBackgroundColorResource(R.color.chip_background_selector)
+                setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.chip_text_selector))
+                chipStrokeWidth = 0f
+            }
+
+            if (bName.equals(selectedBuildingFilter, ignoreCase = true)) {
+                defaultChipId = chip.id
+            }
+
+            chipGroupBuildingFilter.addView(chip)
+        }
+
+        if (defaultChipId != null) {
+            chipGroupBuildingFilter.check(defaultChipId!!)
+        }
+
+        chipGroupBuildingFilter.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val checkedChip = group.findViewById<Chip>(checkedIds[0])
+                selectedBuildingFilter = checkedChip?.text?.toString() ?: "All Buildings"
+            } else {
+                selectedBuildingFilter = "All Buildings"
+            }
+            filterClassroomsList()
+        }
+    }
+
+    private fun filterClassroomsList() {
+        val filtered = if (selectedBuildingFilter.trim().equals("All Buildings", ignoreCase = true)) {
+            rawClassroomsList
+        } else {
+            rawClassroomsList.filter { room ->
+                room.buildingId.trim().equals(selectedBuildingFilter.trim(), ignoreCase = true) ||
+                room.roomNumber.trim().contains(selectedBuildingFilter.trim(), ignoreCase = true)
+            }
+        }
+        adapter.updateClassrooms(filtered)
+    }
+
     private fun showAddEditClassroomDialog(existingClassroom: Classroom?) {
         val dialogBinding = DialogAddEditClassroomBinding.inflate(layoutInflater)
 
-        // Populate Building Dropdown from available buildings in Firestore
-        buildingRepo.getBuildings(
-            onSuccess = { buildings ->
-                val buildingNames = if (buildings.isNotEmpty()) {
-                    buildings.map { it.name.ifEmpty { "Building" } }
-                } else {
-                    listOf("Building A", "Building B")
-                }
-                val dropdownAdapter = ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_dropdown_item_1line,
-                    buildingNames
-                )
-                dialogBinding.etBuildingId.setAdapter(dropdownAdapter)
-            },
-            onError = {
-                val fallbackAdapter = ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_dropdown_item_1line,
-                    listOf("Building A", "Building B")
-                )
-                dialogBinding.etBuildingId.setAdapter(fallbackAdapter)
-            }
+        // Populate Building Dropdown from static CampusBuildings constants
+        val dropdownAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            CampusBuildings.names()
         )
+        dialogBinding.etBuildingId.setAdapter(dropdownAdapter)
 
         if (existingClassroom != null) {
             dialogBinding.tvDialogTitle.text = "Edit Classroom"

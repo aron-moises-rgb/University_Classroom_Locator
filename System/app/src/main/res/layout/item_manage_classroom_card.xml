@@ -69,7 +69,8 @@
             android:layout_marginTop="4dp"
             android:text="ID: classroom_123"
             android:textColor="#9CA3AF"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:visibility="gone" />
 
     </LinearLayout>
 
