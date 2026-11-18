@@ -1,20 +1,27 @@
 package com.example.oopproject.backEnd.repository
 
 import com.example.oopproject.backEnd.data.Building
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 
-class BuildingRepository {
-    private val db = FirebaseFirestore.getInstance()
-    private val buildings = db.collection("buildings")
+/**
+ * BuildingRepository inherits from abstract BaseRepository<Building>,
+ * demonstrating OOP Inheritance, Polymorphism (implementing parseDocument), and Code Reuse.
+ */
+class BuildingRepository : BaseRepository<Building>("buildings") {
+
+    override fun parseDocument(doc: DocumentSnapshot): Building? {
+        return doc.toObject(Building::class.java)
+    }
 
     fun getBuildings(
         onSuccess: (List<Building>) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        buildings.get()
+        collectionRef.get()
             .addOnSuccessListener { result ->
-                onSuccess(result.toObjects(Building::class.java))
+                val list = result.documents.mapNotNull { parseDocument(it) }
+                onSuccess(list)
             }
             .addOnFailureListener { onError(it) }
     }
@@ -23,13 +30,14 @@ class BuildingRepository {
         onUpdate: (List<Building>) -> Unit,
         onError: (Exception) -> Unit
     ): ListenerRegistration {
-        return buildings.addSnapshotListener { snapshot, error ->
+        return collectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 onError(error)
                 return@addSnapshotListener
             }
             if (snapshot != null) {
-                onUpdate(snapshot.toObjects(Building::class.java))
+                val list = snapshot.documents.mapNotNull { parseDocument(it) }
+                onUpdate(list)
             }
         }
     }
@@ -39,11 +47,8 @@ class BuildingRepository {
         onSuccess: () -> Unit,
         onError: (Exception) -> Unit
     ) {
-        val document = buildings.document()
-
-        document.set(building.copy(buildingId = document.id))
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { onError(it) }
+        val document = collectionRef.document()
+        addEntity(document.id, building.copy(buildingId = document.id), onSuccess, onError)
     }
 
     fun updateBuilding(
@@ -51,9 +56,7 @@ class BuildingRepository {
         onSuccess: () -> Unit,
         onError: (Exception) -> Unit
     ) {
-        buildings.document(building.buildingId).set(building)
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { onError(it) }
+        addEntity(building.buildingId, building, onSuccess, onError)
     }
 
     fun deleteBuilding(
@@ -61,8 +64,6 @@ class BuildingRepository {
         onSuccess: () -> Unit,
         onError: (Exception) -> Unit
     ) {
-        buildings.document(buildingId).delete()
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { onError(it) }
+        deleteEntity(buildingId, onSuccess, onError)
     }
 }

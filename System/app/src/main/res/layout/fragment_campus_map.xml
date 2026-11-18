@@ -87,12 +87,59 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Navigation Route Banner -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardRouteBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/cardGpsStatus"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#EFF6FF"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="3dp"
+        app:strokeColor="#2563EB"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <TextView
+                android:id="@+id/tvRouteTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="🚶 Route to Building"
+                android:textColor="#1E40AF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClearRoute"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:paddingHorizontal="8dp"
+                android:text="Clear Route"
+                android:textColor="#1E40AF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:cornerRadius="6dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- WebView for Leaflet Map -->
     <WebView
         android:id="@+id/webViewMap"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/cardGpsStatus" />
+        android:layout_below="@id/cardRouteBanner" />
 
     <!-- FAB to center on user location -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton

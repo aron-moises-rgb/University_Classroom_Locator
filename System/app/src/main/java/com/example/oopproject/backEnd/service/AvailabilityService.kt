@@ -1,5 +1,6 @@
 package com.example.oopproject.backEnd.service
 
+import com.example.oopproject.backEnd.data.Classroom
 import com.example.oopproject.backEnd.data.Schedule
 import com.example.oopproject.backEnd.data.enums.DayOfWeek
 import com.example.oopproject.backEnd.data.enums.RoomStatus
@@ -13,7 +14,17 @@ data class AvailabilityResult(
     val bannerSubtitle: String
 )
 
-class AvailabilityService {
+/**
+ * AvailabilityService implements RoomAvailabilityEvaluator interface,
+ * demonstrating OOP Interface Implementation and Polymorphism.
+ */
+class AvailabilityService : RoomAvailabilityEvaluator {
+
+    override fun evaluateRoomStatus(classroom: Classroom, schedules: List<Schedule>): RoomStatus {
+        val roomSchedules = schedules.filter { isScheduleForRoom(it, classroom.classroomId, classroom.roomNumber) }
+        val result = calculateAvailability(roomSchedules)
+        return result.status
+    }
 
     fun getCurrentDayOfWeek(): DayOfWeek {
         val zone = ZoneId.of("Asia/Manila")

@@ -90,6 +90,11 @@ class CampusMapFragment : Fragment() {
             }
         }
 
+        binding.btnClearRoute.setOnClickListener {
+            binding.cardRouteBanner.visibility = View.GONE
+            binding.webViewMap.evaluateJavascript("clearRoute();", null)
+        }
+
         checkLocationPermissionAndStart()
     }
 
@@ -176,6 +181,7 @@ class CampusMapFragment : Fragment() {
 
                     let userMarker = null;
                     let userAccuracyCircle = null;
+                    let activeRoutePolyline = null;
                     const buildingMarkers = [];
 
                     function loadKmlData(kmlString) {
@@ -186,6 +192,11 @@ class CampusMapFragment : Fragment() {
 
                             for (let i = 0; i < placemarks.length; i++) {
                                 const pm = placemarks[i];
+                                const visEl = pm.getElementsByTagName("visibility")[0];
+                                if (visEl && visEl.textContent.trim() === "0") {
+                                    continue;
+                                }
+
                                 const nameEl = pm.getElementsByTagName("name")[0];
                                 const name = nameEl ? nameEl.textContent.trim() : "Campus Location";
 
@@ -281,16 +292,231 @@ class CampusMapFragment : Fragment() {
                         }
                     }
 
+                    const buildingPathways = {
+                        "heb": [
+                            [14.0676983, 120.6275044],
+                            [14.0676689, 120.6275040],
+                            [14.0676790, 120.6272302],
+                            [14.0676024, 120.6272095],
+                            [14.0675513, 120.6271159],
+                            [14.0675770, 120.6270092],
+                            [14.0676084, 120.6269929],
+                            [14.0676217, 120.6269261],
+                            [14.0672786, 120.6268539],
+                            [14.0672862, 120.6268078],
+                            [14.0673227, 120.6267778]
+                        ],
+                        "cteb": [
+                            [14.0676983, 120.6275044],
+                            [14.0676689, 120.6275040],
+                            [14.0676790, 120.6272302],
+                            [14.0676024, 120.6272095],
+                            [14.0675513, 120.6271159],
+                            [14.0675770, 120.6270092],
+                            [14.0676084, 120.6269929],
+                            [14.0676217, 120.6269261],
+                            [14.0668322, 120.6267601],
+                            [14.0668634, 120.6265769],
+                            [14.0668771, 120.6263868],
+                            [14.0668760, 120.6262777],
+                            [14.0668224, 120.6262786],
+                            [14.0665895, 120.6263647]
+                        ],
+                        "taal": [
+                            [14.0676983, 120.6275044],
+                            [14.0676689, 120.6275040],
+                            [14.0676790, 120.6272302],
+                            [14.0676024, 120.6272095],
+                            [14.0675513, 120.6271159],
+                            [14.0675770, 120.6270092],
+                            [14.0676084, 120.6269929],
+                            [14.0676217, 120.6269261],
+                            [14.0668322, 120.6267601],
+                            [14.0668634, 120.6265769],
+                            [14.0668771, 120.6263868],
+                            [14.0668682, 120.6257677],
+                            [14.0674974, 120.6257075],
+                            [14.0674232, 120.6257123],
+                            [14.0674219, 120.6256604],
+                            [14.0673323, 120.6256278]
+                        ],
+                        "cas": [
+                            [14.0676983, 120.6275044],
+                            [14.0676689, 120.6275040],
+                            [14.0676790, 120.6272302],
+                            [14.0676024, 120.6272095],
+                            [14.0675513, 120.6271159],
+                            [14.0675770, 120.6270092],
+                            [14.0676084, 120.6269929],
+                            [14.0676217, 120.6269261],
+                            [14.0668322, 120.6267601],
+                            [14.0668634, 120.6265769],
+                            [14.0668771, 120.6263868],
+                            [14.0668712, 120.6259707],
+                            [14.0664964, 120.6259733],
+                            [14.0661662, 120.6259628],
+                            [14.0661653, 120.6261302],
+                            [14.0660605, 120.6261273],
+                            [14.0660227, 120.6261462]
+                        ],
+                        "lemery": [
+                            [14.0676983, 120.6275044],
+                            [14.0676689, 120.6275040],
+                            [14.0676790, 120.6272302],
+                            [14.0676024, 120.6272095],
+                            [14.0675513, 120.6271159],
+                            [14.0675770, 120.6270092],
+                            [14.0676084, 120.6269929],
+                            [14.0676217, 120.6269261],
+                            [14.0668322, 120.6267601],
+                            [14.0668634, 120.6265769],
+                            [14.0668771, 120.6263868],
+                            [14.0668712, 120.6259707],
+                            [14.0664964, 120.6259733],
+                            [14.0661662, 120.6259628],
+                            [14.0660282, 120.6259611],
+                            [14.0658861, 120.6259605],
+                            [14.0658819, 120.6259896],
+                            [14.0658592, 120.6261515]
+                        ]
+                    };
+
+                    const buildingPathways2ndEntrance = {
+                        "taal": [
+                            [14.0677514, 120.6259536],
+                            [14.0677776, 120.6259555],
+                            [14.0677666, 120.6261068],
+                            [14.0677368, 120.6261044],
+                            [14.0674991, 120.6260995],
+                            [14.0674974, 120.6257075],
+                            [14.0674232, 120.6257123],
+                            [14.0674219, 120.6256604],
+                            [14.0673323, 120.6256278]
+                        ],
+                        "cas": [
+                            [14.0677514, 120.6259536],
+                            [14.0677776, 120.6259555],
+                            [14.0677666, 120.6261068],
+                            [14.0677368, 120.6261044],
+                            [14.0674991, 120.6260995],
+                            [14.0668712, 120.6259707],
+                            [14.0664964, 120.6259733],
+                            [14.0661662, 120.6259628],
+                            [14.0661653, 120.6261302],
+                            [14.0660605, 120.6261273],
+                            [14.0660227, 120.6261462]
+                        ],
+                        "lemery": [
+                            [14.0677514, 120.6259536],
+                            [14.0677776, 120.6259555],
+                            [14.0677666, 120.6261068],
+                            [14.0677368, 120.6261044],
+                            [14.0674991, 120.6260995],
+                            [14.0668712, 120.6259707],
+                            [14.0664964, 120.6259733],
+                            [14.0661662, 120.6259628],
+                            [14.0660282, 120.6259611],
+                            [14.0658861, 120.6259605],
+                            [14.0658819, 120.6259896],
+                            [14.0658592, 120.6261515]
+                        ],
+                        "cteb": [
+                            [14.0677514, 120.6259536],
+                            [14.0677776, 120.6259555],
+                            [14.0677666, 120.6261068],
+                            [14.0677368, 120.6261044],
+                            [14.0674991, 120.6260995],
+                            [14.0668712, 120.6259707],
+                            [14.0668760, 120.6262777],
+                            [14.0668224, 120.6262786],
+                            [14.0665895, 120.6263647]
+                        ],
+                        "heb": [
+                            [14.0677514, 120.6259536],
+                            [14.0677776, 120.6259555],
+                            [14.0677666, 120.6261068],
+                            [14.0677368, 120.6261044],
+                            [14.0674991, 120.6260995],
+                            [14.0674974, 120.6257075],
+                            [14.0668682, 120.6257677],
+                            [14.0668771, 120.6263868],
+                            [14.0668634, 120.6265769],
+                            [14.0668322, 120.6267601],
+                            [14.0676217, 120.6269261],
+                            [14.0672786, 120.6268539],
+                            [14.0672862, 120.6268078],
+                            [14.0673227, 120.6267778]
+                        ]
+                    };
+
+                    function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+                        const R = 6371000;
+                        const dLat = (lat2 - lat1) * Math.PI / 180;
+                        const dLon = (lon2 - lon1) * Math.PI / 180;
+                        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                  Math.sin(dLon/2) * Math.sin(dLon/2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        return R * c;
+                    }
+
                     function focusBuilding(targetName) {
                         if (!targetName) return;
                         const cleanTarget = targetName.toLowerCase().replace("building", "").trim();
-                        for (let i = 0; i < buildingMarkers.length; i++) {
-                            const item = buildingMarkers[i];
-                            if (item.name.toLowerCase().includes(cleanTarget) || cleanTarget.includes(item.name.toLowerCase())) {
-                                map.setView(item.latLng, 19.5);
+
+                        const mainEntrancePos = [14.0676983, 120.6275044];
+                        const secondEntrancePos = [14.0677514, 120.6259536];
+                        let useSecondEntrance = false;
+
+                        if (userMarker) {
+                            const uLat = userMarker.getLatLng().lat;
+                            const uLng = userMarker.getLatLng().lng;
+                            const dMain = getDistanceInMeters(uLat, uLng, mainEntrancePos[0], mainEntrancePos[1]);
+                            const dSecond = getDistanceInMeters(uLat, uLng, secondEntrancePos[0], secondEntrancePos[1]);
+                            useSecondEntrance = dSecond < dMain;
+                        }
+
+                        const activeMap = useSecondEntrance ? buildingPathways2ndEntrance : buildingPathways;
+                        let routeCoords = null;
+
+                        for (let key in activeMap) {
+                            if (cleanTarget.includes(key) || key.includes(cleanTarget)) {
+                                routeCoords = Array.from(activeMap[key]);
                                 break;
                             }
                         }
+
+                        for (let i = 0; i < buildingMarkers.length; i++) {
+                            const item = buildingMarkers[i];
+                            if (item.name.toLowerCase().includes(cleanTarget) || cleanTarget.includes(item.name.toLowerCase())) {
+                                if (!routeCoords) {
+                                    const startLatLng = userMarker ? [userMarker.getLatLng().lat, userMarker.getLatLng().lng] : [14.0676983, 120.6275044];
+                                    routeCoords = [startLatLng, item.latLng];
+                                } else if (userMarker) {
+                                    routeCoords.unshift([userMarker.getLatLng().lat, userMarker.getLatLng().lng]);
+                                }
+
+                                if (activeRoutePolyline) {
+                                    map.removeLayer(activeRoutePolyline);
+                                }
+                                activeRoutePolyline = L.polyline(routeCoords, {
+                                    color: '#2563EB',
+                                    weight: 6,
+                                    opacity: 0.95,
+                                    dashArray: '8, 8'
+                                }).addTo(map);
+                                map.fitBounds(activeRoutePolyline.getBounds(), { padding: [50, 50] });
+                                break;
+                            }
+                        }
+                    }
+
+                    function clearRoute() {
+                        if (activeRoutePolyline) {
+                            map.removeLayer(activeRoutePolyline);
+                            activeRoutePolyline = null;
+                        }
+                        map.setView([14.06679, 120.62613], 18);
                     }
 
                     function updateUserLocation(lat, lng) {
@@ -339,6 +565,8 @@ class CampusMapFragment : Fragment() {
             if (targetBuilding.isNotEmpty()) {
                 val escapedTarget = JSONObject.quote(targetBuilding)
                 binding.webViewMap.evaluateJavascript("focusBuilding($escapedTarget);", null)
+                binding.cardRouteBanner.visibility = View.VISIBLE
+                binding.tvRouteTitle.text = "🚶 Route to $targetBuilding"
             }
         } catch (e: Exception) {
             e.printStackTrace()
