@@ -38,7 +38,7 @@ class HomePage : AppCompatActivity() {
             replaceFragment(HomeFragment())
         }
 
-        // Check if user is Admin to show/hide Admin tab
+        // Check user role to adjust tabs dynamically
         checkUserRole()
 
         // Bottom Navigation setup
@@ -58,6 +58,10 @@ class HomePage : AppCompatActivity() {
                 }
                 R.id.nav_map -> {
                     if (currentFragment !is CampusMapFragment) replaceFragment(CampusMapFragment())
+                    true
+                }
+                R.id.nav_teacher_schedule -> {
+                    if (currentFragment !is TeacherScheduleFragment) replaceFragment(TeacherScheduleFragment())
                     true
                 }
                 R.id.nav_admin -> {
@@ -81,8 +85,10 @@ class HomePage : AppCompatActivity() {
             .addOnSuccessListener { document ->
                 val accountType = document.getString("accountType") ?: "Student"
                 val adminItem = binding.bottomNavigation.menu.findItem(R.id.nav_admin)
-                // Show Admin tab if accountType is Admin
+                val teacherItem = binding.bottomNavigation.menu.findItem(R.id.nav_teacher_schedule)
+
                 adminItem?.isVisible = accountType.equals("Admin", ignoreCase = true)
+                teacherItem?.isVisible = accountType.equals("Teacher", ignoreCase = true) || accountType.equals("Faculty", ignoreCase = true)
             }
     }
 
@@ -102,6 +108,13 @@ class HomePage : AppCompatActivity() {
         isProgrammaticNav = true
         replaceFragment(CampusMapFragment.newInstance(buildingName))
         binding.bottomNavigation.selectedItemId = R.id.nav_map
+        isProgrammaticNav = false
+    }
+
+    fun navigateToTeacherSchedule() {
+        isProgrammaticNav = true
+        replaceFragment(TeacherScheduleFragment())
+        binding.bottomNavigation.selectedItemId = R.id.nav_teacher_schedule
         isProgrammaticNav = false
     }
 

@@ -72,8 +72,9 @@ class HomeFragment : Fragment() {
 
         auth = FirebaseAuth.getInstance()
 
-        // Hide admin shortcut by default until role is checked from Firestore
+        // Hide shortcuts by default until role is checked from Firestore
         binding.btnAdminPortal.visibility = View.GONE
+        binding.btnTeacherSchedulePortal.visibility = View.GONE
 
         loadUserProfile()
         loadLiveCampusStats()
@@ -88,6 +89,11 @@ class HomeFragment : Fragment() {
         binding.btnCampusMap.setOnClickListener {
             val homeActivity = activity as? HomePage
             homeActivity?.navigateToMap()
+        }
+
+        binding.btnTeacherSchedulePortal.setOnClickListener {
+            val homeActivity = activity as? HomePage
+            homeActivity?.navigateToTeacherSchedule()
         }
 
         binding.btnAdminPortal.setOnClickListener {
@@ -114,14 +120,19 @@ class HomeFragment : Fragment() {
                     binding.tvUserName.text = if (rawName.isNotEmpty()) "Welcome, $rawName!" else "Welcome!"
                     binding.tvRoleBadge.text = accountType.uppercase()
 
-                    // Strict Role Access: Only display Admin Management Portal card for Admins
+                    // Strict Role Access: Display cards based on user role
                     if (accountType.equals("Admin", ignoreCase = true)) {
                         binding.tvAdminTitle.text = "Admin Management Portal"
                         binding.tvAdminSubtitle.text = "Manage Buildings, Classrooms & Schedules"
                         binding.btnAdminPortal.visibility = View.VISIBLE
                     } else {
-                        // Completely hide Admin Portal card for Students & Teachers
                         binding.btnAdminPortal.visibility = View.GONE
+                    }
+
+                    if (accountType.equals("Teacher", ignoreCase = true) || accountType.equals("Faculty", ignoreCase = true)) {
+                        binding.btnTeacherSchedulePortal.visibility = View.VISIBLE
+                    } else {
+                        binding.btnTeacherSchedulePortal.visibility = View.GONE
                     }
                 }
             }

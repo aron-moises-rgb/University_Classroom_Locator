@@ -17,6 +17,11 @@
         android:title="Map" />
 
     <item
+        android:id="@+id/nav_teacher_schedule"
+        android:icon="@drawable/ic_schedule"
+        android:title="My Schedule" />
+
+    <item
         android:id="@+id/nav_admin"
         android:icon="@drawable/ic_badge"
         android:title="Admin" />
