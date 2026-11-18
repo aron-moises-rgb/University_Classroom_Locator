@@ -184,7 +184,13 @@ class CampusMapFragment : Fragment() {
                                             const lng = parseFloat(coords[0]);
                                             const lat = parseFloat(coords[1]);
 
-                                            const marker = L.marker([lat, lng]).addTo(map);
+                                            const buildingTextIcon = L.divIcon({
+                                                className: 'building-label',
+                                                html: '<div style="background-color: #312E81; color: #FFFFFF; font-family: sans-serif; font-size: 9.5px; font-weight: bold; padding: 2px 5px; border-radius: 4px; border: 1px solid #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.3); white-space: nowrap; display: inline-block; transform: translate(-50%, -50%);">' + name + '</div>',
+                                                iconSize: null,
+                                                iconAnchor: [0, 0]
+                                            });
+                                            const marker = L.marker([lat, lng], { icon: buildingTextIcon }).addTo(map);
                                             marker.bindPopup('<div class="map-popup"><h3>🏛️ ' + name + '</h3><p>Tap for details &amp; room availability.</p></div>');
                                         }
                                     }
