@@ -1,0 +1,22 @@
+UNIFIND • CAMPUS MAP & CLASSROOM LOCATOR
+USER ROLES AND RESPONSIBILITIES
+
+1. ADMIN
+   - Manage classroom records across all 5 campus buildings (HEB, CTEB, TAAL, LEMERY, CAS)
+   - Add, edit, and delete classroom information (room number, floor, seating capacity)
+   - Add, edit, and delete class schedules with real-time schedule conflict prevention
+   - Monitor live system overview stats (total rooms, active schedules) via Admin Dashboard
+
+2. FACULTY / TEACHER
+   - View personalized assigned teaching schedules via the dedicated "My Schedule" portal
+   - Check real-time classroom availability and campus operating hours (07:00 AM - 08:00 PM)
+   - Locate classrooms and buildings within the campus using the interactive map and smart walking directions
+   - View building and floor information with 1-tap map shortcuts
+   - Check detailed room specs, assigned instructors, and weekly schedules
+
+3. STUDENT
+   - Search and filter classrooms by building and floor level
+   - Locate classrooms and buildings within the campus using the interactive map and live GPS tracking
+   - Verify campus perimeter position with live GPS status indicators
+   - Check real-time classroom availability status (Available, Occupied, Upcoming, Closed)
+   - View daily and weekly classroom schedules and building/floor information
