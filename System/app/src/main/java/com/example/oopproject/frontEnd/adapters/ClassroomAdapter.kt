@@ -55,6 +55,10 @@ class ClassroomAdapter(
                 holder.tvStatusBadge.setBackgroundColor(Color.parseColor("#DBEAFE"))
                 holder.tvStatusBadge.setTextColor(Color.parseColor("#1D4ED8"))
             }
+            RoomStatusType.CLOSED -> {
+                holder.tvStatusBadge.setBackgroundColor(Color.parseColor("#F3F4F6"))
+                holder.tvStatusBadge.setTextColor(Color.parseColor("#4B5563"))
+            }
         }
 
         holder.btnDetails.setOnClickListener { onDetailsClick(item) }

@@ -3,7 +3,8 @@ package com.example.oopproject.frontEnd.models
 enum class RoomStatusType {
     AVAILABLE,
     OCCUPIED,
-    UPCOMING
+    UPCOMING,
+    CLOSED
 }
 
 data class ClassroomUiModel(

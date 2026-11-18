@@ -53,6 +53,10 @@ class HomePage : AppCompatActivity() {
                     if (currentFragment !is ClassroomsFragment) replaceFragment(ClassroomsFragment())
                     true
                 }
+                R.id.nav_map -> {
+                    if (currentFragment !is CampusMapFragment) replaceFragment(CampusMapFragment())
+                    true
+                }
                 R.id.nav_admin -> {
                     if (currentFragment !is AdminDashboardFragment) replaceFragment(AdminDashboardFragment())
                     true
@@ -87,6 +91,16 @@ class HomePage : AppCompatActivity() {
         }
         replaceFragment(fragment)
         binding.bottomNavigation.selectedItemId = R.id.nav_classrooms
+    }
+
+    fun navigateToMap() {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+        if (currentFragment !is CampusMapFragment) {
+            replaceFragment(CampusMapFragment())
+        }
+        if (binding.bottomNavigation.selectedItemId != R.id.nav_map) {
+            binding.bottomNavigation.selectedItemId = R.id.nav_map
+        }
     }
 
     fun replaceFragment(fragment: Fragment) {

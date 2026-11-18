@@ -1,0 +1,433 @@
+package com.example.oopproject.frontEnd
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.graphics.Color
+import android.location.Location
+import android.os.Bundle
+import android.os.Looper
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import com.example.oopproject.databinding.FragmentCampusMapBinding
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+
+class CampusMapFragment : Fragment() {
+
+    private var _binding: FragmentCampusMapBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+    private var locationRequest: LocationRequest? = null
+
+    private var lastUserLat: Double = 0.0
+    private var lastUserLng: Double = 0.0
+    private var isMapLoaded = false
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineGranted || coarseGranted) {
+            startLocationUpdates()
+        } else {
+            updateGpsStatus("GPS Permission Denied", "Enable location permission to track position.", "#B91C1C")
+        }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentCampusMapBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+
+        setupWebView()
+
+        binding.fabMyLocation.setOnClickListener {
+            if (lastUserLat != 0.0 && lastUserLng != 0.0) {
+                binding.webViewMap.evaluateJavascript("map.setView([$lastUserLat, $lastUserLng], 19);", null)
+            } else {
+                checkLocationPermissionAndStart()
+            }
+        }
+
+        checkLocationPermissionAndStart()
+    }
+
+    private fun setupWebView() {
+        val webView = binding.webViewMap
+        val webSettings: WebSettings = webView.settings
+        @SuppressLint("SetJavaScriptEnabled")
+        webSettings.javaScriptEnabled = true
+        webSettings.domStorageEnabled = true
+        webSettings.loadWithOverviewMode = true
+        webSettings.useWideViewPort = true
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                isMapLoaded = true
+                loadKmlIntoMap()
+                if (lastUserLat != 0.0 && lastUserLng != 0.0) {
+                    updateMapUserLocation(lastUserLat, lastUserLng)
+                }
+            }
+        }
+
+        val htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Campus Map</title>
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                <style>
+                    html, body, #map {
+                        width: 100%;
+                        height: 100%;
+                        margin: 0;
+                        padding: 0;
+                        background: #F5F3FA;
+                    }
+                    .leaflet-popup-content-wrapper {
+                        border-radius: 12px;
+                        padding: 4px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    }
+                    .leaflet-popup-content {
+                        font-family: sans-serif;
+                        font-size: 14px;
+                        color: #111827;
+                        line-height: 1.4;
+                    }
+                    .map-popup h3 {
+                        margin: 0 0 6px 0;
+                        color: #312E81;
+                        font-size: 16px;
+                        font-weight: bold;
+                    }
+                    .map-popup p {
+                        margin: 0;
+                        color: #4B5563;
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                <script>
+                    const campusBounds = L.latLngBounds(
+                        [14.0645, 120.6245],
+                        [14.0688, 120.6285]
+                    );
+
+                    const map = L.map('map', {
+                        maxBounds: campusBounds,
+                        maxBoundsViscosity: 1.0,
+                        minZoom: 17,
+                        maxZoom: 22
+                    }).setView([14.06679, 120.62613], 18);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 22,
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    let userMarker = null;
+                    let userAccuracyCircle = null;
+
+                    function loadKmlData(kmlString) {
+                        try {
+                            const parser = new DOMParser();
+                            const xmlDoc = parser.parseFromString(kmlString, "text/xml");
+                            const placemarks = xmlDoc.getElementsByTagName("Placemark");
+
+                            for (let i = 0; i < placemarks.length; i++) {
+                                const pm = placemarks[i];
+                                const nameEl = pm.getElementsByTagName("name")[0];
+                                const name = nameEl ? nameEl.textContent.trim() : "Campus Location";
+
+                                // 1. Points (Buildings)
+                                const pointEl = pm.getElementsByTagName("Point")[0];
+                                if (pointEl) {
+                                    const coordEl = pointEl.getElementsByTagName("coordinates")[0];
+                                    if (coordEl) {
+                                        const coords = coordEl.textContent.trim().split(',');
+                                        if (coords.length >= 2) {
+                                            const lng = parseFloat(coords[0]);
+                                            const lat = parseFloat(coords[1]);
+
+                                            const marker = L.marker([lat, lng]).addTo(map);
+                                            marker.bindPopup('<div class="map-popup"><h3>🏛️ ' + name + '</h3><p>Tap for details &amp; room availability.</p></div>');
+                                        }
+                                    }
+                                }
+
+                                // 2. Polygons (Areas / Campus bounds)
+                                const polygonEl = pm.getElementsByTagName("Polygon")[0];
+                                if (polygonEl) {
+                                    const outerEl = polygonEl.getElementsByTagName("outerBoundaryIs")[0];
+                                    if (outerEl) {
+                                        const coordEl = outerEl.getElementsByTagName("coordinates")[0];
+                                        if (coordEl) {
+                                            const rawCoords = coordEl.textContent.trim().split(/\s+/);
+                                            const latLngs = [];
+                                            for (let c of rawCoords) {
+                                                const parts = c.split(',');
+                                                if (parts.length >= 2) {
+                                                    const lng = parseFloat(parts[0]);
+                                                    const lat = parseFloat(parts[1]);
+                                                    latLngs.push([lat, lng]);
+                                                }
+                                            }
+                                            if (latLngs.length > 0) {
+                                                const isCampusArea = name.toLowerCase().includes("campus area");
+                                                const polyOptions = isCampusArea ? {
+                                                    color: '#4F46E5',
+                                                    weight: 2,
+                                                    fillColor: '#6366F1',
+                                                    fillOpacity: 0.15
+                                                } : {
+                                                    color: '#312E81',
+                                                    weight: 2.5,
+                                                    fillColor: '#818CF8',
+                                                    fillOpacity: 0.35
+                                                };
+                                                const polygon = L.polygon(latLngs, polyOptions).addTo(map);
+                                                if (!isCampusArea) {
+                                                    polygon.bindPopup('<div class="map-popup"><h3>📍 ' + name + '</h3></div>');
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 3. LineStrings (Pathways)
+                                const lineStringEl = pm.getElementsByTagName("LineString")[0];
+                                if (lineStringEl) {
+                                    const coordEl = lineStringEl.getElementsByTagName("coordinates")[0];
+                                    if (coordEl) {
+                                        const rawCoords = coordEl.textContent.trim().split(/\s+/);
+                                        const latLngs = [];
+                                        for (let c of rawCoords) {
+                                            const parts = c.split(',');
+                                            if (parts.length >= 2) {
+                                                const lng = parseFloat(parts[0]);
+                                                const lat = parseFloat(parts[1]);
+                                                latLngs.push([lat, lng]);
+                                            }
+                                        }
+                                        if (latLngs.length > 0) {
+                                            const polyline = L.polyline(latLngs, {
+                                                color: '#10B981',
+                                                weight: 4,
+                                                opacity: 0.85
+                                            }).addTo(map);
+                                            polyline.bindPopup('<div class="map-popup"><h3>🚶 Path: ' + name + '</h3></div>');
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error parsing KML: ", e);
+                        }
+                    }
+
+                    function updateUserLocation(lat, lng) {
+                        const latLng = [lat, lng];
+                        if (!userMarker) {
+                            const userIcon = L.divIcon({
+                                className: 'user-gps-dot',
+                                html: '<div style="background-color: #3B82F6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.4);"></div>',
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
+                            });
+                            userMarker = L.marker(latLng, { icon: userIcon }).addTo(map);
+                            userMarker.bindPopup("<b>📍 You are here</b>");
+                        } else {
+                            userMarker.setLatLng(latLng);
+                        }
+
+                        if (!userAccuracyCircle) {
+                            userAccuracyCircle = L.circle(latLng, {
+                                radius: 10,
+                                color: '#3B82F6',
+                                fillColor: '#3B82F6',
+                                fillOpacity: 0.15,
+                                weight: 1
+                            }).addTo(map);
+                        } else {
+                            userAccuracyCircle.setLatLng(latLng);
+                        }
+                    }
+                </script>
+            </body>
+            </html>
+        """.trimIndent()
+
+        webView.loadDataWithBaseURL("https://localhost", htmlContent, "text/html", "UTF-8", null)
+    }
+
+    private fun loadKmlIntoMap() {
+        try {
+            val inputStream = requireContext().assets.open("UniFind.kml")
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val kmlString = reader.use { it.readText() }
+            val escapedKml = JSONObject.quote(kmlString)
+            binding.webViewMap.evaluateJavascript("loadKmlData($escapedKml);", null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun checkLocationPermissionAndStart() {
+        val fineLocation = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarseLocation = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+
+        if (fineLocation == PackageManager.PERMISSION_GRANTED || coarseLocation == PackageManager.PERMISSION_GRANTED) {
+            startLocationUpdates()
+        } else {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        val fineLocation = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarseLocation = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+
+        if (fineLocation != PackageManager.PERMISSION_GRANTED && coarseLocation != PackageManager.PERMISSION_GRANTED) {
+            updateGpsStatus("GPS Permission Required", "Please grant location permission.", "#B91C1C")
+            return
+        }
+
+        try {
+            updateGpsStatus("Acquiring GPS Location...", "Connecting to satellites...", "#D97706")
+
+            locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
+                .setMinUpdateIntervalMillis(2000)
+                .build()
+
+            locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    val location = locationResult.lastLocation ?: return
+                    handleNewLocation(location)
+                }
+            }
+
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest!!,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    handleNewLocation(location)
+                }
+            }
+        } catch (e: SecurityException) {
+            updateGpsStatus("GPS Error", "Security Exception: ${e.message}", "#B91C1C")
+        } catch (e: Exception) {
+            updateGpsStatus("GPS Error", "Error: ${e.message}", "#B91C1C")
+        }
+    }
+
+    private fun handleNewLocation(location: Location) {
+        lastUserLat = location.latitude
+        lastUserLng = location.longitude
+
+        if (isMapLoaded) {
+            updateMapUserLocation(lastUserLat, lastUserLng)
+        }
+
+        // Check distance to campus center (14.06679, 120.62613)
+        // Campus max radius ~180 meters + 10 meters buffer = 190 meters
+        val campusCenterLat = 14.06679
+        val campusCenterLng = 120.62613
+
+        val results = FloatArray(1)
+        Location.distanceBetween(lastUserLat, lastUserLng, campusCenterLat, campusCenterLng, results)
+        val distanceMeters = results[0]
+
+        val maxAllowedMeters = 190f
+
+        if (distanceMeters <= maxAllowedMeters) {
+            updateGpsStatus(
+                "🟢 Within Campus Parameter",
+                "Distance to campus center: ${distanceMeters.toInt()}m (Inside/Within 10m)",
+                "#15803D"
+            )
+        } else {
+            val extraMeters = (distanceMeters - maxAllowedMeters).toInt()
+            updateGpsStatus(
+                "⚠️ Outside Campus Parameter!",
+                "You are ~$extraMeters meters outside the 10m campus limit!",
+                "#B91C1C"
+            )
+        }
+    }
+
+    private fun updateMapUserLocation(lat: Double, lng: Double) {
+        val script = "updateUserLocation($lat, $lng);"
+        binding.webViewMap.evaluateJavascript(script, null)
+    }
+
+    private fun updateGpsStatus(title: String, subtitle: String, colorHex: String) {
+        if (_binding == null) return
+        binding.tvGpsStatusTitle.text = title
+        binding.tvGpsStatusSubtitle.text = subtitle
+        try {
+            binding.ivGpsIndicator.setColorFilter(Color.parseColor(colorHex))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::fusedLocationClient.isInitialized && ::locationCallback.isInitialized) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        if (::fusedLocationClient.isInitialized && ::locationCallback.isInitialized) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
+        _binding = null
+    }
+}

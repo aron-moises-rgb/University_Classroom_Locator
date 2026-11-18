@@ -29,6 +29,18 @@ class AvailabilityService {
         currentTime: LocalTime = LocalTime.now()
     ): AvailabilityResult {
 
+        // 0. Check Campus Operating Hours (07:00 AM - 08:00 PM)
+        val openingTime = LocalTime.of(7, 0)
+        val closingTime = LocalTime.of(20, 0)
+
+        if (!currentTime.isBefore(closingTime) || currentTime.isBefore(openingTime)) {
+            return AvailabilityResult(
+                status = RoomStatus.CLOSED,
+                bannerTitle = "Campus Closed",
+                bannerSubtitle = "Outside Operating Hours (07:00 AM - 08:00 PM)"
+            )
+        }
+
         val todaysSchedules = schedules.filter { it.day == currentDay }
 
         // 1. Check if room is currently OCCUPIED

@@ -12,6 +12,11 @@
         android:title="@string/nav_classrooms" />
 
     <item
+        android:id="@+id/nav_map"
+        android:icon="@drawable/ic_map"
+        android:title="Map" />
+
+    <item
         android:id="@+id/nav_admin"
         android:icon="@drawable/ic_badge"
         android:title="Admin" />

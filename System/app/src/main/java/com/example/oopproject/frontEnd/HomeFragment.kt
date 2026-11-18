@@ -64,6 +64,11 @@ class HomeFragment : Fragment() {
             homeActivity?.navigateToClassrooms("")
         }
 
+        binding.btnCampusMap.setOnClickListener {
+            val homeActivity = activity as? HomePage
+            homeActivity?.navigateToMap()
+        }
+
         binding.btnAdminPortal.setOnClickListener {
             if (currentUserRole.equals("Admin", ignoreCase = true)) {
                 val homeActivity = activity as? HomePage
@@ -163,10 +168,10 @@ class HomeFragment : Fragment() {
                 currentTime = currentTime
             )
 
-            if (availability.status == RoomStatus.OCCUPIED) {
-                occupiedCount++
-            } else {
-                freeCount++
+            when (availability.status) {
+                RoomStatus.OCCUPIED -> occupiedCount++
+                RoomStatus.AVAILABLE, RoomStatus.UPCOMING -> freeCount++
+                RoomStatus.CLOSED -> { /* Campus closed outside operating hours */ }
             }
         }
 

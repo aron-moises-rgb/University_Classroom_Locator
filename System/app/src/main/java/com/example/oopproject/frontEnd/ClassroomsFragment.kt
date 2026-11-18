@@ -272,12 +272,14 @@ class ClassroomsFragment : Fragment() {
                 RoomStatus.AVAILABLE -> RoomStatusType.AVAILABLE
                 RoomStatus.OCCUPIED -> RoomStatusType.OCCUPIED
                 RoomStatus.UPCOMING -> RoomStatusType.UPCOMING
+                RoomStatus.CLOSED -> RoomStatusType.CLOSED
             }
 
             val uiStatusText = when (availability.status) {
                 RoomStatus.AVAILABLE -> "• AVAILABLE"
                 RoomStatus.OCCUPIED -> "• OCCUPIED"
                 RoomStatus.UPCOMING -> "• UPCOMING"
+                RoomStatus.CLOSED -> "• CLOSED"
             }
 
             ClassroomUiModel(
