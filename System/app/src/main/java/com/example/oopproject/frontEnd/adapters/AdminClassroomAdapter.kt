@@ -9,11 +9,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.oopproject.R
 import com.example.oopproject.backEnd.data.Classroom
 
+
 class AdminClassroomAdapter(
-    private var items: List<Classroom> = emptyList(),
+    items: List<Classroom> = emptyList(),
     private val onEditClick: (Classroom) -> Unit = {},
     private val onDeleteClick: (Classroom) -> Unit = {}
-) : RecyclerView.Adapter<AdminClassroomAdapter.AdminClassroomViewHolder>() {
+) : BaseAdapter<Classroom, AdminClassroomAdapter.AdminClassroomViewHolder>(items) {
 
     class AdminClassroomViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvRoomName: TextView = itemView.findViewById(R.id.tvRoomName)
@@ -40,10 +41,7 @@ class AdminClassroomAdapter(
         holder.btnDelete.setOnClickListener { onDeleteClick(item) }
     }
 
-    override fun getItemCount(): Int = items.size
-
     fun updateClassrooms(newItems: List<Classroom>) {
-        this.items = newItems
-        notifyDataSetChanged()
+        updateItems(newItems)
     }
 }
